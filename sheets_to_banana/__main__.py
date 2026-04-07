@@ -5,7 +5,7 @@ Usage:
 
 Options:
     <sheets_url>     Google Sheets URL (public / anyone-with-link).
-    --break INDEX    Which break to encode, 0-based (default: print all).
+    --break INDEX    Which break to encode, 1-based (default: print all).
     --tempo BPM      Tempo in BPM (default: 120).
 """
 
@@ -38,7 +38,7 @@ def main() -> None:
     )
     parser.add_argument('url', help='Google Sheets URL (public share link)')
     parser.add_argument('--break', dest='break_index', type=int, default=None,
-                        metavar='INDEX', help='Break to encode, 0-based (default: all)')
+                        metavar='INDEX', help='Break to encode, 1-based (default: all)')
     parser.add_argument('--tempo', type=int, default=120,
                         metavar='BPM', help='Tempo in BPM (default: 120)')
     args = parser.parse_args()
@@ -59,24 +59,24 @@ def main() -> None:
         sys.exit(1)
 
     if args.break_index is not None:
-        if args.break_index >= len(breaks):
+        if args.break_index < 1 or args.break_index > len(breaks):
             logger.error(
-                "Break index %d out of range (sheet has %d break(s): 0–%d).",
-                args.break_index, len(breaks), len(breaks) - 1,
+                "Break %d out of range (sheet has %d break(s): 1–%d).",
+                args.break_index, len(breaks), len(breaks),
             )
             sys.exit(1)
-        selected = [(args.break_index, breaks[args.break_index])]
+        selected = [(args.break_index, breaks[args.break_index - 1])]
     else:
-        selected = list(enumerate(breaks))
+        selected = [(i + 1, brk) for i, brk in enumerate(breaks)]
 
-    for idx, brk in selected:
+    for num, brk in selected:
         tracks = map_break(brk)
         if not tracks:
-            logger.error("Break [%d] \"%s\" — no recognised instruments.", idx, brk.name)
+            logger.error("Break %d \"%s\" — no recognised instruments.", num, brk.name)
             continue
 
         n_bars = max(len(t.notes) for t in tracks) // 16
-        logger.info("Break [%d] \"%s\" — %d bars", idx, brk.name, n_bars)
+        logger.info("Break %d \"%s\" — %d bars", num, brk.name, n_bars)
         for name, notes in brk.tracks.items():
             hit_count = sum(1 for n in notes if n != '0')
             logger.info("  %-20s  %d hits", name, hit_count)
