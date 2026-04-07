@@ -11,8 +11,11 @@ BananaDrum instrument IDs:
   '5' Caixa  '6' Timbau    '7' High Surdo  '8' Mid Surdo  '9' Low Surdo
 """
 
+import logging
 from dataclasses import dataclass
 from sheets_to_banana.parse import Break
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,9 +37,16 @@ _LOW_SURDO  = {'1': '1', 'O': '1','D': '2'}        # Low Surdo plays on '1' and 
 _MID_SURDO  = {'2': '1', 'O': '1','D': '2'}        # Mid Surdo plays on '2' and 'O'
 
 
-def _map(note: str, table: dict[str, str]) -> str:
-    """Look up note in table; return '0' (rest) if not found."""
-    return table.get(note, '0')
+def _map(note: str, table: dict[str, str], instrument: str, warn: bool = True) -> str:
+    """Look up note in table; return '0' (rest) if not found.
+
+    Logs a warning when a non-rest note character has no entry in the table,
+    unless warn=False (used where a rest on this track is expected by design).
+    """
+    result = table.get(note, '0')
+    if warn and result == '0' and note != '0':
+        logger.warning("Unmapped note '%s' for instrument '%s' → rest", note, instrument)
+    return result
 
 
 # ── instrument classification ─────────────────────────────────────────────────
@@ -80,24 +90,26 @@ def map_break(brk: Break) -> list[MappedTrack]:
     for name, notes in brk.tracks.items():
         kind = _classify(name)
         if kind is None:
+            logger.error("Unexpected instrument '%s' — no BananaDrum mapping, skipped", name)
             continue
 
         if kind == 'surdo_split':
-            result.append(MappedTrack('9', [_map(n, _LOW_SURDO)  for n in notes]))
-            result.append(MappedTrack('8', [_map(n, _MID_SURDO)  for n in notes]))
+            # '1' notes are silent on Mid Surdo, '2' notes are silent on Low Surdo — both expected
+            result.append(MappedTrack('9', [_map(n, _LOW_SURDO,  name, warn=False) for n in notes]))
+            result.append(MappedTrack('8', [_map(n, _MID_SURDO,  name, warn=False) for n in notes]))
         elif kind == 'high_surdo':
-            result.append(MappedTrack('7', [_map(n, _HIGH_SURDO) for n in notes]))
+            result.append(MappedTrack('7', [_map(n, _HIGH_SURDO, name) for n in notes]))
         elif kind == 'caixa':
-            result.append(MappedTrack('5', [_map(n, _CAIXA)      for n in notes]))
+            result.append(MappedTrack('5', [_map(n, _CAIXA,      name) for n in notes]))
         elif kind == 'repique':
-            result.append(MappedTrack('3', [_map(n, _REPIQUE)    for n in notes]))
+            result.append(MappedTrack('3', [_map(n, _REPIQUE,    name) for n in notes]))
         elif kind == 'timbau':
-            result.append(MappedTrack('6', [_map(n, _TIMBAU)     for n in notes]))
+            result.append(MappedTrack('6', [_map(n, _TIMBAU,     name) for n in notes]))
         elif kind == 'tamborim':
-            result.append(MappedTrack('2', [_map(n, _TAMBORIM)   for n in notes]))
+            result.append(MappedTrack('2', [_map(n, _TAMBORIM,   name) for n in notes]))
         elif kind == 'chocalho':
-            result.append(MappedTrack('1', [_map(n, _CHOCALHO)   for n in notes]))
+            result.append(MappedTrack('1', [_map(n, _CHOCALHO,   name) for n in notes]))
         elif kind == 'agogo':
-            result.append(MappedTrack('0', [_map(n, _AGOGO)      for n in notes]))
+            result.append(MappedTrack('0', [_map(n, _AGOGO,      name) for n in notes]))
 
     return result

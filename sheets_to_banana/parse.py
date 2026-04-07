@@ -21,8 +21,11 @@ Row types recognised:
 
 import csv
 import io
+import logging
 import re
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 _KEYWORDS_AS_REST = {'levada', 'virada'}
 
@@ -80,6 +83,26 @@ def parse_sheet(csv_text: str) -> list[Break]:
     current_break: Break | None = None
     in_bar_group = False
     bar_group_offset = 0  # steps accumulated before the current bar group
+    bar_group_number = 0
+    prev_group_instruments: set[str] | None = None
+    current_group_instruments: set[str] = set()
+
+    def _close_bar_group() -> None:
+        nonlocal prev_group_instruments, current_group_instruments, bar_group_number
+        if prev_group_instruments is not None:
+            added   = current_group_instruments - prev_group_instruments
+            removed = prev_group_instruments - current_group_instruments
+            if added or removed:
+                break_name = current_break.name if current_break else '?'
+                logger.warning(
+                    "Break \"%s\" bar group %d has different instruments than group %d: "
+                    "+[%s] -[%s]",
+                    break_name, bar_group_number + 1, bar_group_number,
+                    ', '.join(sorted(added)), ', '.join(sorted(removed)),
+                )
+        prev_group_instruments = current_group_instruments
+        current_group_instruments = set()
+        bar_group_number += 1
 
     for raw_row in reader:
         # Ensure at least 65 cols so indexing is always safe
@@ -90,6 +113,7 @@ def parse_sheet(csv_text: str) -> list[Break]:
         # ── Empty row: separator between bar groups or between breaks ──
         if not col0 and all(c == '' for c in note_cells):
             if in_bar_group:
+                _close_bar_group()
                 bar_group_offset += 64  # one 64-step group just completed
             in_bar_group = False
             continue
@@ -98,6 +122,7 @@ def parse_sheet(csv_text: str) -> list[Break]:
         if _BAR_RANGE_RE.match(col0):
             if in_bar_group:
                 # No empty row between groups — still increment
+                _close_bar_group()
                 bar_group_offset += 64
             in_bar_group = True
             if current_break is None:
@@ -117,6 +142,9 @@ def parse_sheet(csv_text: str) -> list[Break]:
             current_break = Break(name=header_name)
             breaks.append(current_break)
             bar_group_offset = 0
+            bar_group_number = 0
+            prev_group_instruments = None
+            current_group_instruments = set()
             continue
 
         # ── Instrument row: inside a bar group ──
@@ -126,6 +154,7 @@ def parse_sheet(csv_text: str) -> list[Break]:
                 # Pre-pad with rests for all bar groups before this one
                 current_break.tracks[col0] = ['0'] * bar_group_offset
             current_break.tracks[col0].extend(notes)
+            current_group_instruments.add(col0)
 
     if current_break is not None:
         _finalize_break(current_break)
