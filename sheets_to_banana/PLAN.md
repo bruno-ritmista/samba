@@ -79,6 +79,49 @@ CLI entry point:
 python -m sheets_to_banana <sheets_url> [--break 0] [--tempo 120]
 ```
 
+### Increment 7 — keywords.py
+Handles merged cells whose text content is a recognised keyword rather than individual
+note characters. These cells appear in the Google Sheet when an arranger writes a
+shorthand name for a stock pattern (e.g. *levada*, *virada*) spanning several columns.
+
+**Detection:** during parse, any note cell whose stripped value does not consist solely
+of known note characters (`X`, `x`, `O`, `S`, `L`, `H`, `/`, `K`, `W`, `D`, `0-9`)
+and contains no embedded whitespace is a keyword cell.  A merged keyword cell spans
+one or more following empty columns (the same heuristic used for Increment 6).
+
+**Expansion:** the keyword + instrument pair is looked up in a table; the result is a
+flat list of note characters whose length equals the number of columns spanned.  If no
+match is found the columns are filled with rests and a warning is printed.
+
+**Keyword table (initial set):**
+
+| Keyword | Instrument | Pattern (per 16 steps unless noted) |
+|---|---|---|
+| `levada` | Caixa | `X 0 x 0 X 0 x 0 X 0 x 0 X 0 x 0` |
+| `levada` | Tamborim | `X 0 X 0 X X 0 X 0 X X 0 X 0 X 0` |
+| `levada` | Repique | `X 0 0 0 X 0 0 0 X 0 0 0 X 0 0 0` |
+| `virada` | Caixa | `X x X x X x X x X x X x X X X X` |
+| `virada` | Repique | `X 0 X 0 X 0 X 0 X X 0 X X 0 X X` |
+| `virada` | Surdo Mor | `0 0 0 0 0 0 0 0 0 0 0 0 X 0 X 0` |
+
+Patterns for other instrument+keyword combinations are filled with rests (with a
+warning) until explicitly defined.  The table is data-driven so new entries can be
+added without touching any logic.
+
+**Integration point:** `keywords.py` is called inside `parse.py` after the raw note
+cells are read but before they are stored in the `Break` object.  The function
+signature is:
+
+```python
+def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
+    """Replace keyword cells with their predefined note sequences.
+
+    Each element of `cells` is either a note character, an empty string
+    (rest from a non-merged cell), or a keyword string.  Returns a flat
+    list of the same total length with keywords replaced by note characters.
+    """
+```
+
 ## Verified encoding example
 Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
