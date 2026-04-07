@@ -12,8 +12,10 @@ Row types recognised:
   - Empty row          → separator, ignored
   - Section label row  → col 0 matches "N - M" (e.g. "1 - 4"); marks the
                          start of a new 4-bar group
-  - Break header row   → non-empty col 0, note columns all empty, not
-                         inside a bar group; marks the start of a new Break
+  - Break header row   → col 0 OR col 1 is non-empty (rest of the row is
+                         empty) and we are not inside a bar group; marks the
+                         start of a new Break. Breaks with no tracks (e.g.
+                         the song title row) are dropped from the result.
   - Instrument row     → col 0 is an instrument name, cols 1-64 are notes
 """
 
@@ -77,6 +79,7 @@ def parse_sheet(csv_text: str) -> list[Break]:
     breaks: list[Break] = []
     current_break: Break | None = None
     in_bar_group = False
+    bar_group_offset = 0  # steps accumulated before the current bar group
 
     for raw_row in reader:
         # Ensure at least 65 cols so indexing is always safe
@@ -86,11 +89,16 @@ def parse_sheet(csv_text: str) -> list[Break]:
 
         # ── Empty row: separator between bar groups or between breaks ──
         if not col0 and all(c == '' for c in note_cells):
+            if in_bar_group:
+                bar_group_offset += 64  # one 64-step group just completed
             in_bar_group = False
             continue
 
         # ── Section label row: "1 - 4", "5 - 8", etc. ──
         if _BAR_RANGE_RE.match(col0):
+            if in_bar_group:
+                # No empty row between groups — still increment
+                bar_group_offset += 64
             in_bar_group = True
             if current_break is None:
                 # Notes before any break header → create an unnamed break
@@ -98,22 +106,29 @@ def parse_sheet(csv_text: str) -> list[Break]:
                 breaks.append(current_break)
             continue
 
-        # ── Break header row: non-empty name, no notes, not in a bar group ──
-        if col0 and not in_bar_group and all(c == '' for c in note_cells):
+        # ── Break header row: name in col 0 or col 1, rest empty, not in bar group ──
+        # In many sheets col 0 is empty and the name is in col 1 (merged cell).
+        col1 = note_cells[0] if note_cells else ''
+        rest_empty = all(c == '' for c in note_cells[1:])
+        header_name = col0 or col1
+        if header_name and not in_bar_group and (not col0 or not col1) and rest_empty:
             if current_break is not None:
                 _finalize_break(current_break)
-            current_break = Break(name=col0)
+            current_break = Break(name=header_name)
             breaks.append(current_break)
+            bar_group_offset = 0
             continue
 
         # ── Instrument row: inside a bar group ──
         if col0 and in_bar_group and current_break is not None:
             notes = [_normalize_note(c) for c in note_cells]
             if col0 not in current_break.tracks:
-                current_break.tracks[col0] = []
+                # Pre-pad with rests for all bar groups before this one
+                current_break.tracks[col0] = ['0'] * bar_group_offset
             current_break.tracks[col0].extend(notes)
 
     if current_break is not None:
         _finalize_break(current_break)
 
-    return breaks
+    # Drop header-only rows (e.g. song title) that collected no tracks
+    return [b for b in breaks if b.tracks]
