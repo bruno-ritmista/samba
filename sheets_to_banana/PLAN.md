@@ -48,6 +48,31 @@ Implements the BananaDrum URL encoding (replicates the TypeScript in
 
 **URL format:** `https://bananadrum.net/?a2=4-4.{tempo}.{n_bars}.1-4.16.{track1}.{track2}...`
 
+### Increment 6 — merged_cells.py
+Handles note cells that contain multiple note characters separated by spaces
+(e.g. `'O         S'`, `'S    O   O'`). These arise from merged cells in the
+Google Sheet and represent rhythmic subdivisions that don't fit into the
+standard 1/16th-note grid — either **triplets** or **6/8 time**.
+
+**Problem:** BananaDrum's grid is fixed at 1/16th notes. A merged cell spanning
+N columns that contains K note characters represents K evenly-spaced hits inside
+N sixteenth-note slots — which is only expressible in BananaDrum if K divides N.
+
+**Approach (to be designed):**
+- Detect merged-cell strings during parse: a note cell whose value contains
+  embedded whitespace (after stripping) is a merged-cell value.
+- Record the raw string and the number of columns it spans (inferred from how
+  many following empty cells belong to the same merge region).
+- Quantise the K hits onto the N-slot grid using nearest-sixteenth rounding, or
+  flag the cell as "non-quantisable" and warn the user.
+- Common cases to support:
+  - 2 hits in 4 slots → hits at slots 0 and 2 (straight eighth notes)
+  - 3 hits in 4 slots → triplet → warn/skip (not representable exactly)
+  - 2 hits in 3 slots → hits at slots 0 and 2 (dotted-eighth + sixteenth)
+
+**Out of scope for now:** actual 6/8 arrangements; only handle the cases that
+can be losslessly mapped onto the 1/16th grid.
+
 ### Increment 5 — main.py
 CLI entry point:
 ```
