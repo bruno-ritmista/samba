@@ -17,6 +17,8 @@ from sheets_to_banana.parse import Break
 
 logger = logging.getLogger(__name__)
 
+_warned: set[tuple[str, str]] = set()  # (note, instrument) pairs already warned
+
 
 @dataclass
 class MappedTrack:
@@ -45,7 +47,10 @@ def _map(note: str, table: dict[str, str], instrument: str, warn: bool = True) -
     """
     result = table.get(note, '0')
     if warn and result == '0' and note != '0':
-        logger.warning("Unmapped note '%s' for instrument '%s' → rest", note, instrument)
+        key = (note, instrument)
+        if key not in _warned:
+            _warned.add(key)
+            logger.warning("Unmapped note '%s' for instrument '%s' → rest", note, instrument)
     return result
 
 
