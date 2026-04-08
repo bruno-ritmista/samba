@@ -93,14 +93,14 @@ one or more following empty columns (the same heuristic used for Increment 6).
 flat list of note characters whose length equals the number of columns spanned.  If no
 match is found the columns are filled with rests and a warning is printed.
 
-**Keyword table (initial set):**
+**Keyword table (dummy set):**
 
 | Keyword | Instrument | Pattern (per 16 steps unless noted) |
 |---|---|---|
-| `levada` | Caixa | `X 0 x 0 X 0 x 0 X 0 x 0 X 0 x 0` |
-| `levada` | Tamborim | `X 0 X 0 X X 0 X 0 X X 0 X 0 X 0` |
-| `levada` | Repique | `X 0 0 0 X 0 0 0 X 0 0 0 X 0 0 0` |
-| `virada` | Caixa | `X x X x X x X x X x X x X X X X` |
+| `levada` | Caixa | `X X x / X x / x X x / x X x / x` |
+| `levada` | Tamborim | `X x x x X x x x X x x x X x x x` |
+| `levada` | Repique | `X x / O X x / O X x / O X x / O` |
+| `virada` | Caixa | `X X x / X 0 X 0 X 0 0 0 0 0 0 0` |
 | `virada` | Repique | `X 0 X 0 X 0 X 0 X X 0 X X 0 X X` |
 | `virada` | Surdo Mor | `0 0 0 0 0 0 0 0 0 0 0 0 X 0 X 0` |
 
