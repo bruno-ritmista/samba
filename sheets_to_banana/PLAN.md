@@ -154,6 +154,133 @@ Strip any trailing parenthetical comment with `re.sub(r'\s*\(.*\)\s*$', '', name
 - `encode.py` — add optional `title: str = ''` parameter to `encode_url`; when non-empty, prepend `?t={quoted_title}&` before `a2=`.
 - `__main__.py` — call `parse_song_title`, build the combined title, pass it to `encode_url`.
 
+### Increment 9 — 6/8 polyrhythm (hard)
+
+Handle merged cells that span exactly 4 columns, contain space-separated note
+characters, and are **not** keywords. These represent 6/8 groups: up to 6
+evenly-spaced notes in the space of 4 sixteenth-note slots.  BananaDrum models
+this with a polyrhythm that replaces 4 base notes with 6 polyrhythm notes.
+
+**Reference URL (12 equally spaced surdo hits in 6/8, 1 bar):**
+`https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.30.50.60.70.80.910TU-6eI5`
+
+That URL uses a single polyrhythm descriptor `0-15-12` (start=0, span=15,
+length=12), packed into `6eI5`. For the 4-column case the descriptor is
+`i-3-6` per group.
+
+**Detection (parse.py):**
+
+A 6/8 cell is a note cell where:
+- `span == 4` (one non-empty cell followed by exactly 3 empty cells)
+- `' ' in cell` (multiple note characters separated by spaces)
+- The non-space content consists only of valid note characters (not a keyword)
+
+Add a `PolyGroup` dataclass:
+
+```python
+@dataclass
+class PolyGroup:
+    start: int        # 0-based absolute slot index in the full track's flat list
+    end: int          # start + 3 (always 4-column span)
+    notes: list[str]  # exactly 6 raw note characters; pad/truncate as needed
+```
+
+Extend `Break`:
+```python
+@dataclass
+class Break:
+    name: str
+    tracks: dict[str, list[str]] = field(default_factory=dict)
+    polygroups: dict[str, list[PolyGroup]] = field(default_factory=dict)
+```
+
+In the instrument-row loop in `parse_sheet`, before calling `expand_keywords`,
+scan `note_cells` for 6/8 cells: for each position `i` where `note_cells[i]`
+is non-empty, has a space, looks like note chars, and is followed by exactly 3
+empty cells, extract the raw note chars, build a `PolyGroup` with
+`start = bar_group_offset + i`, `end = bar_group_offset + i + 3`, and
+`notes = cell.split()` padded/truncated to 6 with `'0'`.  Replace all 4 cells
+with `''` so `expand_keywords` sees them as ordinary rests.
+
+Warn and truncate if the cell contains more than 6 note characters.
+
+**Mapping (mapping.py):**
+
+Add `MappedPolyrhythm` and extend `MappedTrack`:
+
+```python
+@dataclass
+class MappedPolyrhythm:
+    start: int        # base slot index (same as PolyGroup.start)
+    end: int          # base slot index (same as PolyGroup.end)
+    notes: list[str]  # 6 style indices, e.g. ['1','0','1','0','1','0']
+
+@dataclass
+class MappedTrack:
+    instrument_id: str
+    notes: list[str]
+    polyrhythms: list[MappedPolyrhythm] = field(default_factory=list)
+```
+
+In `map_break`, after building the flat notes for each instrument, also
+translate any `PolyGroup` entries in `brk.polygroups[name]` to
+`MappedPolyrhythm` using the same note-style table.  For `surdo_split`,
+duplicate and translate separately for Low and Mid Surdo tracks.
+
+**Encoding (encode.py):**
+
+Two new helpers:
+
+```python
+_POLY_B11 = '0123456789-'  # 11 chars; '-' is index 10
+
+def _pack_polyrhythm_string(s: str) -> str:
+    n = 0
+    for ch in s:
+        n = n * 11 + _POLY_B11.index(ch)
+    return _url_encode_number(n)
+
+def _encode_polyrhythms(polys: list[MappedPolyrhythm]) -> str:
+    """Build and pack the polyrhythm descriptor string.
+
+    BananaDrum applies polyrhythms in list order.  When applying poly[k],
+    all earlier polys have already been applied, so the start/end indices
+    must be shifted by the cumulative extra notes those polys added.
+    Each 4→6 polyrhythm contributes +2 extra notes.
+    """
+    cumulative_extra = 0
+    parts: list[str] = []
+    for poly in sorted(polys, key=lambda p: p.start):
+        adj_start = poly.start + cumulative_extra
+        span = poly.end - poly.start          # always 3
+        length = len(poly.notes)              # always 6
+        parts += [str(adj_start), str(span), str(length)]
+        cumulative_extra += length - (span + 1)   # 6 - 4 = 2
+    return _pack_polyrhythm_string('-'.join(parts))
+```
+
+Build the **effective notes list** by splicing polyrhythm notes into the base
+notes (replaces the 4 base slots with 6 polyrhythm notes for each group):
+
+```python
+def _build_effective_notes(base: list[str], polys: list[MappedPolyrhythm]) -> list[str]:
+    out, idx = [], 0
+    for poly in sorted(polys, key=lambda p: p.start):
+        out.extend(base[idx:poly.start])
+        out.extend(poly.notes)
+        idx = poly.end + 1
+    out.extend(base[idx:])
+    return out
+```
+
+In `encode_url`, for each track that has polyrhythms:
+- Use `_build_effective_notes` instead of `track.notes` as the digit list
+- Append `-{_encode_polyrhythms(track.polyrhythms)}` after the encoded notes
+
+**Verified reference (polyrhythm packing):**
+Descriptor string `0-15-12` → digits [0,10,1,5,10,1,2] in base 11
+→ integer 1 633 029 → base-64 chars `6eI5`. ✓
+
 ## Verified encoding example
 Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
