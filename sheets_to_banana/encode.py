@@ -10,6 +10,8 @@ Encoding:
   - The resulting integer is encoded in base 64 using characters 0-9a-zA-Z~_
 """
 
+from urllib.parse import quote
+
 from sheets_to_banana.mapping import MappedTrack
 
 # Base-64 character table matching BananaDrum's urlNumberToCharacter
@@ -48,13 +50,19 @@ def _encode_notes(notes: list[str], base: int) -> str:
     return _url_encode_number(number)
 
 
-def encode_url(tracks: list[MappedTrack], tempo: int = 120, n_bars: int | None = None) -> str:
+def encode_url(
+    tracks: list[MappedTrack],
+    tempo: int = 120,
+    n_bars: int | None = None,
+    title: str = '',
+) -> str:
     """Build a BananaDrum shareable URL from a list of MappedTrack objects.
 
     Args:
         tracks:  Ordered list of MappedTrack as produced by mapping.map_break.
         tempo:   BPM (default 120).
         n_bars:  Number of bars. If None, inferred from track length (steps / 16).
+        title:   Optional human-readable title added as ?t= parameter.
 
     Returns:
         A full https://bananadrum.net/ URL.
@@ -73,4 +81,6 @@ def encode_url(tracks: list[MappedTrack], tempo: int = 120, n_bars: int | None =
         track_parts.append(track.instrument_id + encoded)
 
     composition = f"4-4.{tempo}.{n_bars}.1-4.16." + ".".join(track_parts)
+    if title:
+        return f"https://bananadrum.net/?t={quote(title, safe='')}&a2={composition}"
     return f"https://bananadrum.net/?a2={composition}"

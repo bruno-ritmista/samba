@@ -65,4 +65,5 @@ def fetch_csv(url: str) -> str:
     export_url = build_export_url(sheet_id, gid)
     response = requests.get(export_url)
     response.raise_for_status()
+    response.encoding = 'utf-8'
     return response.text

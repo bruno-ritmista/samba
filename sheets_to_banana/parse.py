@@ -58,6 +58,23 @@ def _finalize_break(brk: Break) -> None:
         notes.extend(['0'] * (max_len - len(notes)))
 
 
+def parse_song_title(csv_text: str) -> str:
+    """Return the song title from the first break-header row in the CSV.
+
+    The song title row has col 0 empty, col 1 non-empty, and all other cols
+    empty.  Returns the raw cell value, or '' if no such row is found.
+    """
+    reader = csv.reader(io.StringIO(csv_text))
+    for raw_row in reader:
+        row = raw_row + [''] * max(0, 65 - len(raw_row))
+        col0 = row[0].strip()
+        col1 = row[1].strip()
+        rest_empty = all(c.strip() == '' for c in row[2:65])
+        if not col0 and col1 and rest_empty:
+            return col1
+    return ''
+
+
 def parse_sheet(csv_text: str) -> list[Break]:
     """Parse CSV text into a list of Break objects.
 

@@ -11,10 +11,11 @@ Options:
 
 import argparse
 import logging
+import re
 import sys
 
 from sheets_to_banana.fetch import fetch_csv
-from sheets_to_banana.parse import parse_sheet
+from sheets_to_banana.parse import parse_sheet, parse_song_title
 from sheets_to_banana.mapping import map_break
 from sheets_to_banana.encode import encode_url
 
@@ -52,6 +53,10 @@ def main() -> None:
         logger.error("Failed to fetch sheet: %s", e)
         sys.exit(1)
 
+    raw_song_title = parse_song_title(csv_text)
+    # Take the segment after the last ' - ' (e.g. "... - Mangueira 2023" → "Mangueira 2023")
+    song_short = raw_song_title.split(' - ')[-1].strip() if raw_song_title else ''
+
     breaks = parse_sheet(csv_text)
 
     if not breaks:
@@ -81,7 +86,9 @@ def main() -> None:
             hit_count = sum(1 for n in notes if n != '0')
             logger.info("  %-20s  %d hits", name, hit_count)
 
-        url = encode_url(tracks, tempo=args.tempo, n_bars=n_bars)
+        clean_break = re.sub(r'\s*\(.*\)\s*$', '', brk.name).strip()
+        title = f"{song_short} - {clean_break}" if song_short else clean_break
+        url = encode_url(tracks, tempo=args.tempo, n_bars=n_bars, title=title)
         print(url)
 
 
