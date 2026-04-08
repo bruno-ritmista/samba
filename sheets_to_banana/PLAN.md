@@ -122,6 +122,38 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
     """
 ```
 
+### Increment 8 — title in BananaDrum link
+
+Adds a human-readable `?t=` title parameter to the generated URL.
+
+**Example output:**
+```
+https://bananadrum.net/?t=Mangueira%202023%20-%20Break%20Alegria%20invade%20o%20Pel%C3%B4&a2=...
+```
+
+**Source data (from the real sheet CSV):**
+- Row 0, col 1: song title — `"As Áfricas Que a Bahia Canta" - Estação Primeira de Mangueira 2023`
+- Row 1, col 1: break name — `Break Alegria invade o Pelô   (Zeichen gekreuzte Fäuste)`
+
+**Song title extraction:**
+The song title row is the first break-header row in the CSV (col 0 empty, col 1 non-empty, no tracks follow before the next header). Take the text after the last ` - ` separator to get the short form (e.g. `Estação Primeira de Mangueira 2023` → but trimmed further per house style to `Mangueira 2023`).
+
+Rule: split on ` - `, take the last segment, strip surrounding whitespace.
+
+**Break title cleaning:**
+Strip any trailing parenthetical comment with `re.sub(r'\s*\(.*\)\s*$', '', name).strip()`.
+
+**Combined title:**
+`{song_short} - {break_clean}` → `Mangueira 2023 - Break Alegria invade o Pelô`
+
+**URL encoding:**
+`urllib.parse.quote(title, safe='')` — encodes spaces as `%20` and preserves Unicode (e.g. `ô` → `%C3%B4`).
+
+**Implementation touches:**
+- `parse.py` — add `parse_song_title(csv_text: str) -> str` that reads the first break-header row (col 0 empty, col 1 non-empty, rest empty) and returns its value, or `''` if absent.
+- `encode.py` — add optional `title: str = ''` parameter to `encode_url`; when non-empty, prepend `?t={quoted_title}&` before `a2=`.
+- `__main__.py` — call `parse_song_title`, build the combined title, pass it to `encode_url`.
+
 ## Verified encoding example
 Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
