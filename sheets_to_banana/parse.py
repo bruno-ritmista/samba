@@ -25,9 +25,9 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-logger = logging.getLogger(__name__)
+from .keywords import expand_keywords
 
-_KEYWORDS_AS_REST = {'levada', 'virada'}
+logger = logging.getLogger(__name__)
 
 # Section label col 0 looks like "1 - 4" or "5-8"
 _BAR_RANGE_RE = re.compile(r'^\d+\s*-\s*\d+$')
@@ -40,15 +40,9 @@ class Break:
 
 
 def _normalize_note(cell: str) -> str:
-    """Convert a raw CSV cell to a note character or rest marker '0'.
-
-    Empty cells and Levada/Virada keywords both become '0'.
-    All other values are returned as-is (e.g. 'X', '1', '2', 'O', 'OO').
-    """
+    """Convert a raw CSV cell to a note character or rest marker '0'."""
     stripped = cell.strip()
-    if not stripped or stripped.lower() in _KEYWORDS_AS_REST:
-        return '0'
-    return stripped
+    return stripped if stripped else '0'
 
 
 def _finalize_break(brk: Break) -> None:
@@ -149,7 +143,7 @@ def parse_sheet(csv_text: str) -> list[Break]:
 
         # ── Instrument row: inside a bar group ──
         if col0 and in_bar_group and current_break is not None:
-            notes = [_normalize_note(c) for c in note_cells]
+            notes = [_normalize_note(c) for c in expand_keywords(col0, note_cells)]
             if col0 not in current_break.tracks:
                 # Pre-pad with rests for all bar groups before this one
                 current_break.tracks[col0] = ['0'] * bar_group_offset

@@ -27,8 +27,8 @@ class MappedTrack:
 # ── note-character → style-index tables ──────────────────────────────────────
 
 _AGOGO   = {'L': '1', 'H': '2'}
-_CHOCALHO = {'X': '1'}
-_TAMBORIM = {'X': '1'}
+_CHOCALHO = {'X': '1', 'x': '2'}
+_TAMBORIM = {'X': '1', 'x': '2'}
 _REPIQUE  = {'X': '1', 'x': '2', '/': '3', 'K': '4', 'W': '5', 'O': '6', 'S': '7'}
 _CAIXA    = {'X': '1', 'x': '2', 'W': '3', '/': '4'}
 _TIMBAU   = {'S': '2', 'O': '3'}          # 'OO' → rest (two 1/32nd tones, skipped)

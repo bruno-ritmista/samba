@@ -89,36 +89,72 @@ def test_empty_cell_becomes_rest():
     assert all(n == '0' for n in parse_sheet(csv_text)[0].tracks['Caixa'])
 
 
-def test_levada_becomes_rest():
-    notes = ['Levada'] + [''] * 63
+def test_levada_expands_to_pattern_for_caixa():
+    """'Levada' spanning 16 cols on Caixa should expand to the full levada/Caixa pattern."""
+    notes = ['Levada'] + [''] * 15 + ['X'] + [''] * 47  # keyword spans 16, then a note
     csv_text = make_csv(
         break_header('B'),
         section_label(),
         instrument_row('Caixa', notes),
     )
-    assert parse_sheet(csv_text)[0].tracks['Caixa'][0] == '0'
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    expected = 'X X x / X x / x X x / x X x / x'.split()
+    assert track[:16] == expected
+    assert track[16] == 'X'
 
 
-def test_virada_becomes_rest():
-    notes = ['Virada'] + [''] * 63
+def test_levada_beat_position_selects_correct_slice():
+    """A 4-col levada on beat 2 (col 4) should yield notes 5-8, not notes 1-4."""
+    pattern = 'X X x / X x / x X x / x X x / x'.split()
+    # beat 1: levada cols 0-3, beat 2: levada cols 4-7, beat 3: X, beat 4: empty
+    notes = ['levada'] + [''] * 3 + ['levada'] + [''] * 3 + ['X'] + [''] * 55
     csv_text = make_csv(
         break_header('B'),
         section_label(),
         instrument_row('Caixa', notes),
     )
-    assert parse_sheet(csv_text)[0].tracks['Caixa'][0] == '0'
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    assert track[0:4] == pattern[0:4]   # beat 1 → notes 1-4
+    assert track[4:8] == pattern[4:8]   # beat 2 → notes 5-8
+    assert track[8] == 'X'
 
 
-def test_levada_case_insensitive():
-    """'LEVADA' and 'levada' should both become rest."""
+def test_virada_expands_to_pattern_for_caixa():
+    """'Virada' spanning 16 cols on Caixa should expand to the virada/Caixa pattern."""
+    notes = ['Virada'] + [''] * 15 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', notes),
+    )
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    expected = 'X X x / X 0 x 0'.split()
+    assert track[:8] == expected
+
+
+def test_keyword_case_insensitive():
+    """'LEVADA', 'Levada', and 'levada' should all expand to the same pattern."""
+    expected_first = 'X X x / X x / x X x / x X x / x'.split()[0]
     for keyword in ('LEVADA', 'Levada', 'levada'):
-        notes = [keyword] + [''] * 63
+        notes = [keyword] + [''] * 15 + [''] * 48
         csv_text = make_csv(
             break_header('B'),
             section_label(),
             instrument_row('Caixa', notes),
         )
-        assert parse_sheet(csv_text)[0].tracks['Caixa'][0] == '0'
+        assert parse_sheet(csv_text)[0].tracks['Caixa'][0] == expected_first
+
+
+def test_unknown_keyword_fills_with_rests():
+    """An unrecognised keyword should fill its span with rests (with a warning)."""
+    notes = ['zarabatana'] + [''] * 15 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', notes),
+    )
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    assert all(n == '0' for n in track[:16])
 
 
 def test_note_characters_preserved():
