@@ -93,7 +93,6 @@ validation.
 
 - abcm2ps (ABC → PostScript)
 - ghostscript / ps2pdf (PostScript → PDF)
-- imagemagick (PDF → PNG)
 - gspread (Google Sheets API)
 - google-auth (Colab user authentication)
 
@@ -189,13 +188,9 @@ are hardcoded for screen-optimised single-page output.
 
 Reads ABC content from `[abc]!A2` and runs the local
 rendering pipeline:
-
-```
 abcm2ps input.abc -O output.ps
-ps2pdf output.ps output.pdf
-convert -density 150 output.pdf output.png
-```
-
+gs -dBATCH -dNOPAUSE -sDEVICE=png16m -r150 -sOutputFile=output.png output.ps
+gs -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=output.pdf output.ps
 Produces two output files:
 - `<sheet_title>.pdf`
 - `<sheet_title>.png`
