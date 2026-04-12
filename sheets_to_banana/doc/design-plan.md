@@ -4,16 +4,16 @@ This file desctribes the plan to design sheets_to_banana.
 
 ## Design increments
 
-### Increment 1 — fetch custom table-based notes from Google sheets
+### ✅ Increment 1 — fetch custom table-based notes from Google sheets
 Converts a Google Sheets URL into CSV text using the free CSV export endpoint
 (no API key needed for public sheets).
 
-### Increment 2 — parse custom table-based notes (one note per cell)
+### ✅ Increment 2 — parse custom table-based notes (one note per cell)
 Parses the CSV into `Break` objects. Each break holds one dict mapping instrument
 name → full note sequence (all bar groups concatenated into one flat list).
 The Z-pattern layout (bars 1–4, then 5–8, …) is stitched together automatically.
 
-### Increment 3 — map custom table-based notes to Bananadrum notes
+### ✅ Increment 3 — map custom table-based notes to Bananadrum notes
 Translates CSV instrument names and note characters into BananaDrum instrument IDs
 and note style IDs.
 
@@ -35,7 +35,7 @@ and note style IDs.
 tracks. `'1'` hits → Low Surdo `'9'`; `'2'` hits → Mid Surdo `'8'`; `'O'` hits →
 **both** tracks (unison). Unknown chars and `W` on Surdo Mor → rest (`'0'`).
 
-### Increment 4 — encode.py
+### ✅ Increment 4 — encode.py
 Implements the BananaDrum URL encoding (replicates the TypeScript in
 `packages/bananadrum-core/src/prod/serialisation/`):
 - Notes are treated as digits of a base-N number (last step = LSB)
@@ -47,13 +47,13 @@ Implements the BananaDrum URL encoding (replicates the TypeScript in
 
 **URL format:** `https://bananadrum.net/?a2=4-4.{tempo}.{n_bars}.1-4.16.{track1}.{track2}...`
 
-### Increment 5 — intergrate increments 1-5
+### ✅ Increment 5 — intergrate increments 1-5
 CLI entry point:
 ```
 python -m sheets_to_banana <sheets_url> [--break 0] [--tempo 120]
 ```
 
-### Increment 6 — parse, encode keywords (e.g. levada, virada) from custom table-based notes to Bananadrum notes
+### ✅ Increment 6 — parse, encode keywords (e.g. levada, virada) from custom table-based notes to Bananadrum notes
 Handles merged cells whose text content is a recognised keyword rather than individual
 note characters. These cells appear in the Google Sheet when an arranger writes a
 shorthand name for a stock pattern (e.g. *levada*, *virada*) spanning several columns.
@@ -96,7 +96,7 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
     """
 ```
 
-### Increment 7 — Add title in BananaDrum link
+### ✅ Increment 7 — Add title in BananaDrum link
 
 Adds a human-readable `?t=` title parameter to the generated URL.
 
@@ -128,7 +128,7 @@ Strip any trailing parenthetical comment with `re.sub(r'\s*\(.*\)\s*$', '', name
 - `encode.py` — add optional `title: str = ''` parameter to `encode_url`; when non-empty, prepend `?t={quoted_title}&` before `a2=`.
 - `__main__.py` — call `parse_song_title`, build the combined title, pass it to `encode_url`.
 
-### Increment 8 — parse custom table-based notes (merged cells with multiple notes)
+### ▶️Increment 8 — parse custom table-based notes in 6/8 time signature
 
 Handle merged cells that span exactly 16 columns (one full bar), contain
 space-separated note characters, and are **not** keywords. These represent
@@ -136,8 +136,10 @@ space-separated note characters, and are **not** keywords. These represent
 BananaDrum models this with a polyrhythm that replaces 16 base notes with
 12 polyrhythm notes.
 
-**Reference URL (12 equally spaced surdo hits in 6/8, 1 bar):**
-`https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.30.50.60.70.80.910TU-6eI5`
+**Reference URLs:**
+- 16 notes replaced by 1 set of 12 notes: `https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.3999999-6eI5.50.60.70.80.90`
+- 16 notes replaced by 4 sets of 3 notes: `https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.3999999-geSZ~GGuojKAk.50.60.70.80.90`
+- 4 notes replaced by 1 set of 3 notes: `https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.319000000-3nq.50.60.70.80.90`
 
 That URL uses a single polyrhythm descriptor `0-15-12` (start=0, span=15,
 length=12), packed into `6eI5`. For the 16-column case the descriptor is
@@ -260,3 +262,8 @@ Descriptor string `0-15-12` → digits [0,10,1,5,10,1,2] in base 11
 ## Verified encoding example
 Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
+
+
+### ⌛Increment 9 - Remove trailling empty bars
+
+### 
