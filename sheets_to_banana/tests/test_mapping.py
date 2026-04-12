@@ -4,14 +4,16 @@ Each test builds a minimal Break and asserts on the mapped output.
 """
 
 import pytest
-from sheets_to_banana.parse import Break
-from sheets_to_banana.mapping import map_break, MappedTrack
+from sheets_to_banana.parse import Break, PolyGroup
+from sheets_to_banana.mapping import map_break, MappedTrack, MappedPolyrhythm
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-def make_break(instrument: str, notes: list[str]) -> Break:
-    return Break(name='Test', tracks={instrument: notes})
+def make_break(instrument: str, notes: list[str],
+               polygroups: dict | None = None) -> Break:
+    return Break(name='Test', tracks={instrument: notes},
+                 polygroups=polygroups or {})
 
 
 def single_note(char: str, length: int = 16) -> list[str]:
@@ -225,6 +227,65 @@ def test_surdo_split_track_length_matches_input():
     tracks = map_break(make_break('Surdo 1a/"2a"', notes))
     for t in tracks:
         assert len(t.notes) == 64
+
+
+# ── polyrhythm translation (Increment 8) ─────────────────────────────────────
+
+def test_no_polygroups_gives_empty_polyrhythms():
+    t = get_track(map_break(make_break('Caixa', ['0'] * 16)), '5')
+    assert t.polyrhythms == []
+
+
+def test_polygroup_translated_to_mapped_polyrhythm():
+    pg = PolyGroup(start=0, end=3, notes=['X'] * 3)
+    brk = make_break('Repique', ['0'] * 16, {'Repique': [pg]})
+    t = get_track(map_break(brk), '3')
+    assert len(t.polyrhythms) == 1
+    mp = t.polyrhythms[0]
+    assert mp.start == 0
+    assert mp.end == 3
+    assert mp.notes == ['1'] * 3   # 'X' → '1' for Repique
+
+
+def test_polyrhythm_start_end_preserved():
+    pg = PolyGroup(start=32, end=35, notes=['x'] * 3)
+    brk = make_break('Caixa', ['0'] * 64, {'Caixa': [pg]})
+    mp = get_track(map_break(brk), '5').polyrhythms[0]
+    assert mp.start == 32
+    assert mp.end == 35
+
+
+def test_multiple_polygroups_all_translated():
+    pg1 = PolyGroup(start=0, end=3, notes=['X'] * 3)
+    pg2 = PolyGroup(start=4, end=7, notes=['x'] * 3)
+    brk = make_break('Caixa', ['0'] * 16, {'Caixa': [pg1, pg2]})
+    polys = get_track(map_break(brk), '5').polyrhythms
+    assert len(polys) == 2
+    assert polys[0].notes == ['1'] * 3
+    assert polys[1].notes == ['2'] * 3
+
+
+def test_surdo_split_polyrhythm_translated_for_both_tracks():
+    """'O' in a surdo 6/8 cell hits both Low and Mid Surdo polyrhythms."""
+    pg = PolyGroup(start=0, end=3, notes=['O'] * 3)
+    brk = make_break('Surdo 1a/"2a"', ['0'] * 16, {'Surdo 1a/"2a"': [pg]})
+    tracks = map_break(brk)
+    low = get_track(tracks, '9')
+    mid = get_track(tracks, '8')
+    assert len(low.polyrhythms) == 1
+    assert len(mid.polyrhythms) == 1
+    assert low.polyrhythms[0].notes == ['1'] * 3
+    assert mid.polyrhythms[0].notes == ['1'] * 3
+
+
+def test_surdo_split_polyrhythm_1_only_on_low():
+    pg = PolyGroup(start=0, end=3, notes=['1'] * 3)
+    brk = make_break('Surdo 1a/"2a"', ['0'] * 16, {'Surdo 1a/"2a"': [pg]})
+    tracks = map_break(brk)
+    low = get_track(tracks, '9')
+    mid = get_track(tracks, '8')
+    assert low.polyrhythms[0].notes == ['1'] * 3
+    assert mid.polyrhythms[0].notes == ['0'] * 3
 
 
 # ── multiple instruments in one break ─────────────────────────────────────────

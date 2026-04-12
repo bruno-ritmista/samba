@@ -1,4 +1,7 @@
-"""Increment 3: Translate parsed notes into BananaDrum instrument/note IDs.
+"""Increments 3 & 8: Translate parsed notes into BananaDrum instrument/note IDs.
+
+Increment 8 adds translation of PolyGroup objects (from parse.py) into
+MappedPolyrhythm objects attached to each MappedTrack.
 
 Each CSV instrument row is identified by keyword-matching its label, then
 each note character is translated to a BananaDrum note-style index ('0' = rest).
@@ -12,8 +15,8 @@ BananaDrum instrument IDs:
 """
 
 import logging
-from dataclasses import dataclass
-from sheets_to_banana.parse import Break
+from dataclasses import dataclass, field
+from sheets_to_banana.parse import Break, PolyGroup
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +24,17 @@ _warned: set[tuple[str, str]] = set()  # (note, instrument) pairs already warned
 
 
 @dataclass
+class MappedPolyrhythm:
+    start: int          # base slot index (same as PolyGroup.start)
+    end: int            # base slot index (same as PolyGroup.end)
+    notes: list[str]    # exactly 3 style indices (mapped from raw note chars; '0' = pause)
+
+
+@dataclass
 class MappedTrack:
-    instrument_id: str      # BananaDrum instrument ID ('0'..'9')
-    notes: list[str]        # per-step style index: '0'=rest, '1','2',… = hit
+    instrument_id: str                          # BananaDrum instrument ID ('0'..'9')
+    notes: list[str]                            # per-step style index: '0'=rest, '1','2',… = hit
+    polyrhythms: list[MappedPolyrhythm] = field(default_factory=list)
 
 
 # ── note-character → style-index tables ──────────────────────────────────────
@@ -73,6 +84,23 @@ def _classify(name: str) -> str | None:
     return None
 
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _translate_polys(
+    polygroups: list[PolyGroup],
+    table: dict[str, str],
+    instrument: str,
+    warn: bool = True,
+) -> list[MappedPolyrhythm]:
+    return [
+        MappedPolyrhythm(
+            pg.start, pg.end,
+            [_map(n, table, instrument, warn=warn) for n in pg.notes],
+        )
+        for pg in polygroups
+    ]
+
+
 # ── public API ────────────────────────────────────────────────────────────────
 
 def map_break(brk: Break) -> list[MappedTrack]:
@@ -98,23 +126,34 @@ def map_break(brk: Break) -> list[MappedTrack]:
             logger.error("Unexpected instrument '%s' — no BananaDrum mapping, skipped", name)
             continue
 
+        pgs = brk.polygroups.get(name, [])
+
         if kind == 'surdo_split':
             # '1' notes are silent on Mid Surdo, '2' notes are silent on Low Surdo — both expected
-            result.append(MappedTrack('9', [_map(n, _LOW_SURDO,  name, warn=False) for n in notes]))
-            result.append(MappedTrack('8', [_map(n, _MID_SURDO,  name, warn=False) for n in notes]))
+            result.append(MappedTrack('9', [_map(n, _LOW_SURDO,  name, warn=False) for n in notes],
+                                      _translate_polys(pgs, _LOW_SURDO,  name, warn=False)))
+            result.append(MappedTrack('8', [_map(n, _MID_SURDO,  name, warn=False) for n in notes],
+                                      _translate_polys(pgs, _MID_SURDO,  name, warn=False)))
         elif kind == 'high_surdo':
-            result.append(MappedTrack('7', [_map(n, _HIGH_SURDO, name) for n in notes]))
+            result.append(MappedTrack('7', [_map(n, _HIGH_SURDO, name) for n in notes],
+                                      _translate_polys(pgs, _HIGH_SURDO, name)))
         elif kind == 'caixa':
-            result.append(MappedTrack('5', [_map(n, _CAIXA,      name) for n in notes]))
+            result.append(MappedTrack('5', [_map(n, _CAIXA,      name) for n in notes],
+                                      _translate_polys(pgs, _CAIXA,      name)))
         elif kind == 'repique':
-            result.append(MappedTrack('3', [_map(n, _REPIQUE,    name) for n in notes]))
+            result.append(MappedTrack('3', [_map(n, _REPIQUE,    name) for n in notes],
+                                      _translate_polys(pgs, _REPIQUE,    name)))
         elif kind == 'timbau':
-            result.append(MappedTrack('6', [_map(n, _TIMBAU,     name) for n in notes]))
+            result.append(MappedTrack('6', [_map(n, _TIMBAU,     name) for n in notes],
+                                      _translate_polys(pgs, _TIMBAU,     name)))
         elif kind == 'tamborim':
-            result.append(MappedTrack('2', [_map(n, _TAMBORIM,   name) for n in notes]))
+            result.append(MappedTrack('2', [_map(n, _TAMBORIM,   name) for n in notes],
+                                      _translate_polys(pgs, _TAMBORIM,   name)))
         elif kind == 'chocalho':
-            result.append(MappedTrack('1', [_map(n, _CHOCALHO,   name) for n in notes]))
+            result.append(MappedTrack('1', [_map(n, _CHOCALHO,   name) for n in notes],
+                                      _translate_polys(pgs, _CHOCALHO,   name)))
         elif kind == 'agogo':
-            result.append(MappedTrack('0', [_map(n, _AGOGO,      name) for n in notes]))
+            result.append(MappedTrack('0', [_map(n, _AGOGO,      name) for n in notes],
+                                      _translate_polys(pgs, _AGOGO,      name)))
 
     return result

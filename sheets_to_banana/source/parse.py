@@ -1,4 +1,9 @@
-"""Increment 2: Parse CSV content into Break objects.
+"""Increments 2 & 8: Parse CSV content into Break objects.
+
+Increment 8 adds detection of 6/8 cells: merged cells that span exactly 16
+columns (one full bar), contain space-separated note characters, and are not
+keywords.  These are extracted as PolyGroup objects before keyword expansion
+and stored in Break.polygroups for downstream processing.
 
 Each Break represents a rhythmic section of the song. Within a Break,
 each instrument's notes are stored as a flat list of note characters —
@@ -32,11 +37,100 @@ logger = logging.getLogger(__name__)
 # Section label col 0 looks like "1 - 4" or "5-8"
 _BAR_RANGE_RE = re.compile(r'^\d+\s*-\s*\d+$')
 
+# Valid note characters that may appear in 6/8 cells
+_POLY_NOTE_CHARS = frozenset('XxOSLH/KWD0123456789')
+
+
+@dataclass
+class PolyGroup:
+    """A polyrhythm cell detected in an instrument row.
+
+    Represents a merged cell spanning exactly 4 columns (one quarter-note beat):
+    one non-empty cell followed by exactly 3 empty cells.  The 4 base
+    sixteenth-note slots (start..end inclusive, end = start + 3) are replaced
+    by exactly 3 polyrhythmic notes in BananaDrum's polyrhythm model.
+    """
+    start: int          # 0-based absolute slot index (bar_group_offset + col)
+    end: int            # start + 3 (always 4-column span)
+    notes: list[str]    # exactly 3 raw note characters (may include '0' for pauses)
+
 
 @dataclass
 class Break:
     name: str
     tracks: dict[str, list[str]] = field(default_factory=dict)
+    polygroups: dict[str, list[PolyGroup]] = field(default_factory=dict)
+
+
+def _assign_poly_slots(cell: str) -> list[str]:
+    """Map a 4-column merged cell's raw content to exactly 3 poly note slots.
+
+    Whitespace at the start or end of the cell string indicates a pause (rest)
+    at the corresponding position.  Internal-only spaces mean the pause is in
+    the middle slot.
+    """
+    tokens = cell.split()
+    if not tokens:
+        logger.warning("Empty 6/8 cell content; treating as 3 rests")
+        return ['0', '0', '0']
+    if len(tokens) > 3:
+        logger.warning(
+            "6/8 cell has %d tokens (max 3); truncating: %r", len(tokens), cell
+        )
+        tokens = tokens[:3]
+    has_leading  = cell[0]  == ' '
+    has_trailing = cell[-1] == ' '
+    if len(tokens) == 3:
+        return tokens
+    if len(tokens) == 2:
+        if has_leading:
+            return ['0', tokens[0], tokens[1]]
+        if has_trailing:
+            return [tokens[0], tokens[1], '0']
+        return [tokens[0], '0', tokens[1]]   # pause in middle
+    # len(tokens) == 1
+    if has_leading:
+        return ['0', tokens[0], '0']
+    return [tokens[0], '0', '0']
+
+
+def _extract_polygroups(note_cells: list[str], bar_group_offset: int) -> list[PolyGroup]:
+    """Scan note_cells for 6/8 polyrhythm cells and return PolyGroup objects.
+
+    A 6/8 cell is a non-empty cell that:
+      - contains at least one space (space-separated note chars)
+      - consists only of valid note characters (no keyword text)
+      - is followed by exactly 3 consecutive empty cells (4-column span)
+
+    Three poly slots are assigned based on leading/trailing whitespace in the
+    cell string (see _assign_poly_slots).  Detected cells and their 3 trailing
+    empty cells are blanked in-place so that expand_keywords sees rests.
+    """
+    groups: list[PolyGroup] = []
+    i = 0
+    while i < len(note_cells):
+        raw_cell = note_cells[i]
+        cell = raw_cell.strip()   # stripped for detection checks
+        if (cell
+                and ' ' in cell
+                and all(c in _POLY_NOTE_CHARS for c in cell if c != ' ')):
+            # Require exactly 3 trailing empty cells (4-column span)
+            if (i + 3 < len(note_cells)
+                    and note_cells[i + 1].strip() == ''
+                    and note_cells[i + 2].strip() == ''
+                    and note_cells[i + 3].strip() == ''):
+                slots = _assign_poly_slots(raw_cell)  # raw: preserves whitespace
+                groups.append(PolyGroup(
+                    start=bar_group_offset + i,
+                    end=bar_group_offset + i + 3,
+                    notes=slots,
+                ))
+                for j in range(i, i + 4):
+                    note_cells[j] = ''
+                i += 4
+                continue
+        i += 1
+    return groups
 
 
 def _normalize_note(cell: str) -> str:
@@ -119,7 +213,8 @@ def parse_sheet(csv_text: str) -> list[Break]:
         # Ensure at least 65 cols so indexing is always safe
         row = raw_row + [''] * max(0, 65 - len(raw_row))
         col0 = row[0].strip()
-        note_cells = [row[i].strip() for i in range(1, 65)]
+        raw_note_cells = [row[i] for i in range(1, 65)]
+        note_cells = [c.strip() for c in raw_note_cells]
 
         # ── Empty row: separator between bar groups or between breaks ──
         if not col0 and all(c == '' for c in note_cells):
@@ -160,6 +255,14 @@ def parse_sheet(csv_text: str) -> list[Break]:
 
         # ── Instrument row: inside a bar group ──
         if col0 and in_bar_group and current_break is not None:
+            # Pass raw cells so _extract_polygroups can read whitespace position;
+            # re-strip after so blanked poly slots appear as rests for expand_keywords.
+            groups = _extract_polygroups(raw_note_cells, bar_group_offset)
+            note_cells = [c.strip() for c in raw_note_cells]
+            if groups:
+                if col0 not in current_break.polygroups:
+                    current_break.polygroups[col0] = []
+                current_break.polygroups[col0].extend(groups)
             notes = [_normalize_note(c) for c in expand_keywords(col0, note_cells)]
             if col0 not in current_break.tracks:
                 # Pre-pad with rests for all bar groups before this one

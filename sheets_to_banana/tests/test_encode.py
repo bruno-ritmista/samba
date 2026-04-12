@@ -5,8 +5,11 @@ https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm  (tested in BananaDrum).
 """
 
 import pytest
-from sheets_to_banana.encode import encode_url, _url_encode_number, _encode_notes
-from sheets_to_banana.mapping import MappedTrack
+from sheets_to_banana.encode import (
+    encode_url, _url_encode_number, _encode_notes,
+    _pack_polyrhythm_string, _encode_polyrhythms, _build_effective_notes,
+)
+from sheets_to_banana.mapping import MappedTrack, MappedPolyrhythm
 
 
 # ── _url_encode_number ────────────────────────────────────────────────────────
@@ -116,6 +119,78 @@ def test_track_order_preserved():
 def test_empty_tracks_raises():
     with pytest.raises(ValueError):
         encode_url([])
+
+
+# ── polyrhythm helpers (Increment 8) ─────────────────────────────────────────
+
+def test_pack_polyrhythm_string_known_value():
+    """Verified: '0-3-3' packs to '3nq'."""
+    assert _pack_polyrhythm_string('0-3-3') == '3nq'
+
+
+def test_encode_polyrhythms_single_group():
+    poly = MappedPolyrhythm(start=0, end=3, notes=['1', '9', '0'])
+    assert _encode_polyrhythms([poly]) == '3nq'
+
+
+def test_encode_polyrhythms_second_beat():
+    """A single group starting at beat 2 (slot 4) → descriptor '4-3-3'."""
+    poly = MappedPolyrhythm(start=4, end=7, notes=['1'] * 3)
+    result = _encode_polyrhythms([poly])
+    assert result == _pack_polyrhythm_string('4-3-3')
+
+
+def test_encode_polyrhythms_two_consecutive_groups():
+    """Two consecutive 4-col groups; second adj_start shifts by -1."""
+    p1 = MappedPolyrhythm(start=0, end=3, notes=['1'] * 3)
+    p2 = MappedPolyrhythm(start=4, end=7, notes=['1'] * 3)
+    result = _encode_polyrhythms([p1, p2])
+    # adj_start of p2 = 4 + (-1) = 3
+    assert result == _pack_polyrhythm_string('0-3-3-3-3-3')
+
+
+def test_build_effective_notes_no_poly():
+    base = ['1', '0'] * 8
+    assert _build_effective_notes(base, []) == base
+
+
+def test_build_effective_notes_replaces_beat():
+    base = ['0'] * 16
+    poly = MappedPolyrhythm(start=0, end=3, notes=['1'] * 3)
+    assert _build_effective_notes(base, [poly]) == ['1'] * 3 + ['0'] * 12
+
+
+def test_build_effective_notes_partial_replacement():
+    """Only beat 2 (slots 4-7) replaced; other beats keep base notes."""
+    base = ['1'] * 4 + ['0'] * 4 + ['2'] * 8
+    poly = MappedPolyrhythm(start=4, end=7, notes=['3'] * 3)
+    result = _build_effective_notes(base, [poly])
+    assert result == ['1'] * 4 + ['3'] * 3 + ['2'] * 8
+
+
+def test_encode_url_with_polyrhythm_verified():
+    """Repinique 6/8 on beat 1 at tempo 110.
+
+    Poly descriptor 0-3-3 packs to '3nq' (verified).
+    Notes ['1','0','0'] → effective 15-note sequence → number = 8^14 = 64^7
+    → encodes to '10000000'.
+    Expected URL: …310000000-3nq…
+    """
+    poly = MappedPolyrhythm(start=0, end=3, notes=['1', '0', '0'])
+    tracks = [
+        MappedTrack('0', ['0'] * 16),
+        MappedTrack('1', ['0'] * 16),
+        MappedTrack('2', ['0'] * 16),
+        MappedTrack('3', ['0'] * 16, [poly]),
+        MappedTrack('5', ['0'] * 16),
+        MappedTrack('6', ['0'] * 16),
+        MappedTrack('7', ['0'] * 16),
+        MappedTrack('8', ['0'] * 16),
+        MappedTrack('9', ['0'] * 16),
+    ]
+    url = encode_url(tracks, tempo=110, n_bars=1)
+    assert url == ('https://bananadrum.net/?a2='
+                   '4-4.110.1.1-4.16.00.10.20.310000000-3nq.50.60.70.80.90')
 
 
 # ── instrument bases — round-trip spot checks ─────────────────────────────────

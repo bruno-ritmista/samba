@@ -6,7 +6,7 @@ This lets you verify the parser without needing a real Google Sheet.
 
 import textwrap
 import pytest
-from sheets_to_banana.parse import parse_sheet, Break
+from sheets_to_banana.parse import parse_sheet, Break, PolyGroup
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -314,6 +314,162 @@ def test_short_instrument_row_padded_to_64():
     assert track[2] == 'X'
     assert track[4] == 'X'
     assert all(n == '0' for n in track[5:])
+
+
+# ── 6/8 cells (Increment 8) ──────────────────────────────────────────────────
+
+def test_68_cell_detected_as_polygroup():
+    """A 4-column merged cell (1 filled + 3 empty) produces a PolyGroup."""
+    notes = ['X X X'] + [''] * 3 + [''] * 60
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    assert 'Repique' in brk.polygroups
+    pgs = brk.polygroups['Repique']
+    assert len(pgs) == 1
+    pg = pgs[0]
+    assert pg.start == 0
+    assert pg.end == 3
+    assert pg.notes == ['X', 'X', 'X']
+
+
+def test_68_cell_replaced_with_rests_in_track():
+    """The 4 columns of a 6/8 cell become rests in the flat notes track."""
+    notes = ['X X X'] + [''] * 3 + [''] * 60
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    track = parse_sheet(csv_text)[0].tracks['Repique']
+    assert all(n == '0' for n in track[:4])
+
+
+def test_68_slot_assignment_no_leading_trailing():
+    """'X O' with no outer spaces → pause in middle → ['X', '0', 'O']."""
+    notes = ['X O'] + [''] * 3 + [''] * 60
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    pg = parse_sheet(csv_text)[0].polygroups['Repique'][0]
+    assert pg.notes == ['X', '0', 'O']
+
+
+def test_68_slot_assignment_leading_space():
+    """' X O' with leading space → pause at start → ['0', 'X', 'O']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', ' X O', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['0', 'X', 'O']
+
+
+def test_68_slot_assignment_trailing_space():
+    """'X O ' with trailing space → pause at end → ['X', 'O', '0']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', 'X O ', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['X', 'O', '0']
+
+
+def test_68_cell_truncated_warns_on_excess_tokens(caplog):
+    """More than 3 tokens in a 6/8 cell emits a warning and keeps first 3."""
+    import logging
+    notes = ['X X X X'] + [''] * 3 + [''] * 60
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    with caplog.at_level(logging.WARNING):
+        brk = parse_sheet(csv_text)[0]
+    pg = brk.polygroups['Repique'][0]
+    assert len(pg.notes) == 3
+    assert pg.notes == ['X', 'X', 'X']
+    assert 'truncating' in caplog.text.lower()
+
+
+def test_68_cell_start_accounts_for_bar_group_offset():
+    """In the second bar group (offset=64) the PolyGroup start is 64 + col."""
+    notes_g1 = [''] * 64
+    notes_g2 = ['X X X'] + [''] * 3 + [''] * 60
+    csv_text = make_csv(
+        break_header('B'),
+        section_label('1 - 4'),
+        instrument_row('Repique', notes_g1),
+        empty_row(),
+        section_label('5 - 8'),
+        instrument_row('Repique', notes_g2),
+    )
+    pgs = parse_sheet(csv_text)[0].polygroups['Repique']
+    assert len(pgs) == 1
+    assert pgs[0].start == 64
+    assert pgs[0].end == 67
+
+
+def test_two_consecutive_68_cells_are_independent():
+    """Two adjacent 4-column 6/8 cells produce two separate PolyGroups."""
+    notes = (['X X X'] + [''] * 3
+           + ['x x x'] + [''] * 3
+           + [''] * 58)
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    pgs = parse_sheet(csv_text)[0].polygroups['Repique']
+    assert len(pgs) == 2
+    assert pgs[0].start == 0 and pgs[0].end == 3
+    assert pgs[1].start == 4 and pgs[1].end == 7
+
+
+def test_keyword_not_detected_as_68_cell():
+    """A keyword (no space in content) spanning 4 columns is NOT a 6/8 cell."""
+    notes = ['Levada'] + [''] * 15 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    assert 'Caixa' not in brk.polygroups or brk.polygroups['Caixa'] == []
+
+
+def test_4col_span_required_not_3():
+    """A merged cell with only 2 trailing empty cells (3-col span) is not a 6/8 cell."""
+    notes = ['X X X'] + [''] * 2 + ['X'] + [''] * 59
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    assert 'Repique' not in brk.polygroups or brk.polygroups['Repique'] == []
+
+
+def test_break_without_68_cells_has_empty_polygroups():
+    """A break with no 6/8 cells has an empty polygroups dict."""
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', ['X'] + [''] * 63),
+    )
+    brk = parse_sheet(csv_text)[0]
+    assert brk.polygroups == {}
 
 
 # ── notes before any break header ────────────────────────────────────────────
