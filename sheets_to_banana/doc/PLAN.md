@@ -1,20 +1,19 @@
 # sheets_to_banana — Design Plan
 
-Reads a publicly shared Google Sheet containing Sapucaiu no Samba percussion notes
-and produces a shareable BananaDrum URL.
+This file desctribes the plan to design sheets_to_banana.
 
-## Architecture: 5 increments
+## Design increments
 
-### Increment 1 — fetch.py
+### Increment 1 — fetch custom table-based notes from Google sheets
 Converts a Google Sheets URL into CSV text using the free CSV export endpoint
 (no API key needed for public sheets).
 
-### Increment 2 — parse.py
+### Increment 2 — parse custom table-based notes (one note per cell)
 Parses the CSV into `Break` objects. Each break holds one dict mapping instrument
 name → full note sequence (all bar groups concatenated into one flat list).
 The Z-pattern layout (bars 1–4, then 5–8, …) is stitched together automatically.
 
-### Increment 3 — mapping.py
+### Increment 3 — map custom table-based notes to Bananadrum notes
 Translates CSV instrument names and note characters into BananaDrum instrument IDs
 and note style IDs.
 
@@ -48,38 +47,13 @@ Implements the BananaDrum URL encoding (replicates the TypeScript in
 
 **URL format:** `https://bananadrum.net/?a2=4-4.{tempo}.{n_bars}.1-4.16.{track1}.{track2}...`
 
-### Increment 6 — merged_cells.py
-Handles note cells that contain multiple note characters separated by spaces
-(e.g. `'O         S'`, `'S    O   O'`). These arise from merged cells in the
-Google Sheet and represent rhythmic subdivisions that don't fit into the
-standard 1/16th-note grid — either **triplets** or **6/8 time**.
-
-**Problem:** BananaDrum's grid is fixed at 1/16th notes. A merged cell spanning
-N columns that contains K note characters represents K evenly-spaced hits inside
-N sixteenth-note slots — which is only expressible in BananaDrum if K divides N.
-
-**Approach (to be designed):**
-- Detect merged-cell strings during parse: a note cell whose value contains
-  embedded whitespace (after stripping) is a merged-cell value.
-- Record the raw string and the number of columns it spans (inferred from how
-  many following empty cells belong to the same merge region).
-- Quantise the K hits onto the N-slot grid using nearest-sixteenth rounding, or
-  flag the cell as "non-quantisable" and warn the user.
-- Common cases to support:
-  - 2 hits in 4 slots → hits at slots 0 and 2 (straight eighth notes)
-  - 3 hits in 4 slots → triplet → warn/skip (not representable exactly)
-  - 2 hits in 3 slots → hits at slots 0 and 2 (dotted-eighth + sixteenth)
-
-**Out of scope for now:** actual 6/8 arrangements; only handle the cases that
-can be losslessly mapped onto the 1/16th grid.
-
-### Increment 5 — main.py
+### Increment 5 — intergrate increments 1-5
 CLI entry point:
 ```
 python -m sheets_to_banana <sheets_url> [--break 0] [--tempo 120]
 ```
 
-### Increment 7 — keywords.py
+### Increment 6 — parse, encode keywords (e.g. levada, virada) from custom table-based notes to Bananadrum notes
 Handles merged cells whose text content is a recognised keyword rather than individual
 note characters. These cells appear in the Google Sheet when an arranger writes a
 shorthand name for a stock pattern (e.g. *levada*, *virada*) spanning several columns.
@@ -122,7 +96,7 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
     """
 ```
 
-### Increment 8 — title in BananaDrum link
+### Increment 7 — Add title in BananaDrum link
 
 Adds a human-readable `?t=` title parameter to the generated URL.
 
@@ -154,24 +128,26 @@ Strip any trailing parenthetical comment with `re.sub(r'\s*\(.*\)\s*$', '', name
 - `encode.py` — add optional `title: str = ''` parameter to `encode_url`; when non-empty, prepend `?t={quoted_title}&` before `a2=`.
 - `__main__.py` — call `parse_song_title`, build the combined title, pass it to `encode_url`.
 
-### Increment 9 — 6/8 polyrhythm (hard)
+### Increment 8 — parse custom table-based notes (merged cells with multiple notes)
 
-Handle merged cells that span exactly 4 columns, contain space-separated note
-characters, and are **not** keywords. These represent 6/8 groups: up to 6
-evenly-spaced notes in the space of 4 sixteenth-note slots.  BananaDrum models
-this with a polyrhythm that replaces 4 base notes with 6 polyrhythm notes.
+Handle merged cells that span exactly 16 columns (one full bar), contain
+space-separated note characters, and are **not** keywords. These represent
+6/8 bars: up to 12 evenly-spaced notes replacing 16 sixteenth-note slots.
+BananaDrum models this with a polyrhythm that replaces 16 base notes with
+12 polyrhythm notes.
 
 **Reference URL (12 equally spaced surdo hits in 6/8, 1 bar):**
 `https://bananadrum.net/?a2=4-4.110.1.1-4.16.00.10.20.30.50.60.70.80.910TU-6eI5`
 
 That URL uses a single polyrhythm descriptor `0-15-12` (start=0, span=15,
-length=12), packed into `6eI5`. For the 4-column case the descriptor is
-`i-3-6` per group.
+length=12), packed into `6eI5`. For the 16-column case the descriptor is
+`i-15-12` per group (or `i-15-n` when the cell contains fewer than 12 notes,
+padded to 12 with rests).
 
 **Detection (parse.py):**
 
 A 6/8 cell is a note cell where:
-- `span == 4` (one non-empty cell followed by exactly 3 empty cells)
+- `span == 16` (one non-empty cell followed by exactly 15 empty cells = 1 full bar)
 - `' ' in cell` (multiple note characters separated by spaces)
 - The non-space content consists only of valid note characters (not a keyword)
 
@@ -181,8 +157,8 @@ Add a `PolyGroup` dataclass:
 @dataclass
 class PolyGroup:
     start: int        # 0-based absolute slot index in the full track's flat list
-    end: int          # start + 3 (always 4-column span)
-    notes: list[str]  # exactly 6 raw note characters; pad/truncate as needed
+    end: int          # start + 15 (always 16-column span)
+    notes: list[str]  # up to 12 raw note characters; pad/truncate to 12
 ```
 
 Extend `Break`:
