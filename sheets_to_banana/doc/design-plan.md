@@ -264,6 +264,54 @@ Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
 
 
-### ⌛Increment 9 - Remove trailling empty bars
+### ⌛Increment 9 — Remove leading and trailing empty bars
 
-### 
+If a break contains leading or trailing bars where every instrument is all rests,
+those bars are stripped before encoding.
+
+**Empty bar definition:** a bar (16 steps) where every step of every track is `'0'`
+(rest). A bar that contains a polyrhythm merged cell is never all rests by definition.
+
+**Behaviour:**
+- Trim leading empty bars **and** trailing empty bars.
+- If all bars are empty after trimming → skip the break entirely (no URL emitted) and
+  print a WARNING.
+- If any bars are trimmed → log INFO with the leading and trailing counts.
+
+**Implementation — `source/mapping.py`:**
+
+Add `trim_empty_bars(tracks)` returning a result object:
+
+```python
+@dataclass
+class TrimResult:
+    tracks: list[MappedTrack]
+    lead_bars: int
+    trail_bars: int
+    all_empty: bool
+```
+
+Algorithm:
+1. `bar_count = len(tracks[0].notes) // 16`
+2. Count `lead_bars`: walk bars from 0 upward until a non-`'0'` step is found in any track.
+3. Count `trail_bars`: walk bars from `bar_count - 1` downward until a non-`'0'` step is found.
+4. If `lead_bars + trail_bars >= bar_count` → return `TrimResult(all_empty=True, ...)`.
+5. `start = lead_bars * 16`, `end = (bar_count - trail_bars) * 16`.
+6. For each track: slice `notes[start:end]`; keep only polyrhythms fully within
+   `[start, end)` and shift their indices by `-start`.
+
+**Integration — `source/__main__.py`** (after `map_break()`):
+
+```python
+result = trim_empty_bars(tracks)
+if result.all_empty:
+    logger.warning("Break %d \"%s\" — all bars empty, skipping.", num, brk.name)
+    continue
+if result.lead_bars or result.trail_bars:
+    logger.info(
+        "Break %d \"%s\" — trimmed %d leading + %d trailing empty bars.",
+        num, brk.name, result.lead_bars, result.trail_bars,
+    )
+tracks = result.tracks
+n_bars = max(len(t.notes) for t in tracks) // 16
+```
