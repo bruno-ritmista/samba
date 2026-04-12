@@ -16,7 +16,7 @@ import sys
 
 from sheets_to_banana.fetch import fetch_csv
 from sheets_to_banana.parse import parse_sheet, parse_song_title
-from sheets_to_banana.mapping import map_break
+from sheets_to_banana.mapping import map_break, trim_empty_bars
 from sheets_to_banana.encode import encode_url
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,17 @@ def main() -> None:
         if not tracks:
             logger.error("Break %d \"%s\" — no recognised instruments.", num, brk.name)
             continue
+
+        trim = trim_empty_bars(tracks)
+        if trim.all_empty:
+            logger.warning("Break %d \"%s\" — all bars empty, skipping.", num, brk.name)
+            continue
+        if trim.lead_bars or trim.trail_bars:
+            logger.info(
+                "Break %d \"%s\" — trimmed %d leading + %d trailing empty bars.",
+                num, brk.name, trim.lead_bars, trim.trail_bars,
+            )
+        tracks = trim.tracks
 
         n_bars = max(len(t.notes) for t in tracks) // 16
         logger.info("Break %d \"%s\" — %d bars", num, brk.name, n_bars)

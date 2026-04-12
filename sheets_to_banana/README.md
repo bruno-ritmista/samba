@@ -8,6 +8,14 @@ Takes a public Google Sheets URL containing percussion notes in a custom table-b
 
 ## Usage
 
+From the repo root:
+
+```bash
+python sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
+```
+
+Or, if the package is installed:
+
 ```bash
 python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 ```
@@ -19,7 +27,7 @@ python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 
 **Example:**
 ```bash
-python -m sheets_to_banana https://docs.google.com/spreadsheets/d/ABC123/edit --break 1 --tempo 110
+python sheets_to_banana https://docs.google.com/spreadsheets/d/ABC123/edit --break 1 --tempo 110
 ```
 
 The script prints the BananaDrum URL to stdout.

@@ -264,7 +264,7 @@ Low Surdo accent on beat 2 and beat 4 of 1 bar:
 → `https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm`  ✓ (tested in BananaDrum)
 
 
-### ⌛Increment 9 — Remove leading and trailing empty bars
+### ⌛Increment 9 — Don't convert leading and trailing empty bars to BananaDrum link 
 
 If a break contains leading or trailing bars where every instrument is all rests,
 those bars are stripped before encoding.

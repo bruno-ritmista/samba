@@ -157,3 +157,65 @@ def map_break(brk: Break) -> list[MappedTrack]:
                                       _translate_polys(pgs, _AGOGO,      name)))
 
     return result
+
+
+# ── increment 9: trim leading/trailing empty bars ─────────────────────────────
+
+@dataclass
+class TrimResult:
+    tracks: list[MappedTrack]
+    lead_bars: int
+    trail_bars: int
+    all_empty: bool
+
+
+def trim_empty_bars(tracks: list[MappedTrack]) -> TrimResult:
+    """Remove leading and trailing bars where every track is all rests ('0').
+
+    A bar is 16 steps. A bar is empty when every step of every track is '0'.
+
+    Args:
+        tracks: List of MappedTrack objects (all same length, multiple of 16).
+
+    Returns:
+        TrimResult with the (possibly shorter) tracks and trim counts.
+        If every bar is empty, all_empty=True and tracks is the original list.
+    """
+    if not tracks:
+        return TrimResult(tracks=tracks, lead_bars=0, trail_bars=0, all_empty=True)
+
+    bar_count = len(tracks[0].notes) // 16
+
+    def bar_is_empty(bar_index: int) -> bool:
+        start = bar_index * 16
+        end = start + 16
+        return all(
+            all(n == '0' for n in t.notes[start:end])
+            for t in tracks
+        )
+
+    lead_bars = 0
+    while lead_bars < bar_count and bar_is_empty(lead_bars):
+        lead_bars += 1
+
+    trail_bars = 0
+    while trail_bars < bar_count - lead_bars and bar_is_empty(bar_count - 1 - trail_bars):
+        trail_bars += 1
+
+    if lead_bars + trail_bars >= bar_count:
+        return TrimResult(tracks=tracks, lead_bars=lead_bars, trail_bars=trail_bars, all_empty=True)
+
+    start = lead_bars * 16
+    end = (bar_count - trail_bars) * 16
+
+    trimmed: list[MappedTrack] = []
+    for t in tracks:
+        new_notes = t.notes[start:end]
+        new_polys = [
+            MappedPolyrhythm(p.start - start, p.end - start, p.notes)
+            for p in t.polyrhythms
+            if p.start >= start and p.end < end
+        ]
+        trimmed.append(MappedTrack(t.instrument_id, new_notes, new_polys))
+
+    return TrimResult(tracks=trimmed, lead_bars=lead_bars, trail_bars=trail_bars, all_empty=False)

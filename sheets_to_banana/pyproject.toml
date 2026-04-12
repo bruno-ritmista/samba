@@ -12,7 +12,7 @@ dependencies = ["requests>=2.31.0"]
 packages = ["sheets_to_banana"]
 
 [tool.setuptools.package-dir]
-"sheets_to_banana" = "source"
+"sheets_to_banana" = "src"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
