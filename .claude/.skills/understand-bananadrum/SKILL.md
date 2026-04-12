@@ -1,6 +1,6 @@
 ---
 name: understand-bananadrum
-description: This skill knows the web-app BananaDrum: 1) understands what this web-app does 2) knows how the web app is implemented 4) privides expertise for debugging, extending, improving, refactoring, creating other scripts that depend on web-app.
+description: This skill knows the web-app BananaDrum 1) understands what this web-app does 2) knows how the web app is implemented 4) privides expertise for debugging, extending, improving, refactoring, creating other scripts that depend on web-app.
 
 # Understand BananaDrum
 
