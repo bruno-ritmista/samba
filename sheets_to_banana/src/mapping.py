@@ -61,7 +61,7 @@ def _map(note: str, table: dict[str, str], instrument: str, warn: bool = True) -
         key = (note, instrument)
         if key not in _warned:
             _warned.add(key)
-            logger.warning("Unmapped note '%s' for instrument '%s' → rest", note, instrument)
+            logger.warning("Note '%s' for instrument '%s' has no matching note in BananaDrum — will be left blank", note, instrument)
     return result
 
 
