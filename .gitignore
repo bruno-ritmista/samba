@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# pytest
+.pytest_cache/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (exclude config, but keep shared skills for AI devs)
+.claude/
+!.claude/.skills/
+!.claude/.skills/understand-bananadrum
+!.claude/.skills/understand-sapu-music-notes
