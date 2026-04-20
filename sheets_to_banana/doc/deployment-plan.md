@@ -1,7 +1,7 @@
 # Sheets-to-Banana Deployment Plan
 
 ## Goal
-Enable non-technical users (zero software development knowledge) to convert Google Sheets notes to BananaDrum URLs by clicking a single link.
+Enable non-technical users (zero software development knowledge) to convert Google Sheets notes to BananaDrum URLs via a simple workflow accessible from a link in the Google Sheet.
 
 ## User Profile
 Users who can open a web link and operate a simple website, but don't use computers regularly in daily jobs. **Desktop browsers only** (see Mobile Support below).
@@ -10,7 +10,7 @@ Users who can open a web link and operate a simple website, but don't use comput
 - Free hosting, minimal setup and maintenance
 - Zero user onboarding
 - Max ~100 requests/day (rough capacity guideline, not a hard limit — see Monitoring)
-- All users share the same notebook (no forking)
+- Notebook source hosted on GitHub; all users open the same notebook, each in their own Colab session
 - Output: Web URL to BananaDrum
 - Error handling: Show user-friendly messages; don't create link if error occurs
 
@@ -20,12 +20,12 @@ Users who can open a web link and operate a simple website, but don't use comput
 
 ### User Flow
 1. User has access to a Google Sheets file (shared with them by the sheet owner)
-2. Sheet contains a formula-generated hyperlink pointing to a Colab notebook
-3. Sheet displays the `sheets_id` value visually **below the link**, with clear instructions to copy it
+2. Sheet contains a formula-generated hyperlink pointing to the Colab notebook on GitHub
+3. Sheet displays the `sheets_url` value visually **below the link**, with clear instructions to copy it
 4. User clicks the link → Colab notebook opens in new tab
-5. User copies the `sheets_id` from the Google Sheet and pastes it into the input cell at the top of the notebook
-6. Notebook prompts for OAuth permission (once per Colab session)
-7. Notebook reads the user's Google Sheet using the pasted `sheets_id`
+5. User copies the `sheets_url` from the Google Sheet and pastes it into the input cell at the top of the notebook
+6. Notebook validates the pasted value and extracts the sheet ID (accepts full URL or bare ID)
+7. Notebook reads the user's Google Sheet using the public CSV export URL (no authentication required — sheet must be shared with "anyone with link can view")
 8. Notebook extracts notes from the sheet
 9. User optionally modifies `break` and `tempo` parameters (have defaults)
 10. Notebook calls the sheets-to-banana Python module with extracted data
@@ -33,10 +33,10 @@ Users who can open a web link and operate a simple website, but don't use comput
 12. If error occurs, notebook shows user-friendly error message (no URL created)
 
 ### Technology Stack
-- **Notebook hosting:** Google Colab (free)
+- **Notebook hosting:** GitHub (same repo as sheets-to-banana module); opened via Colab link
 - **Source code:** GitHub (sheets-to-banana Python module + notebook)
-- **Authentication:** Google OAuth (users grant permission to read their Sheets)
-- **Logging:** Google Cloud Logging via a dedicated service account (see Logging)
+- **Authentication:** None required for sheet reading (public CSV export URL)
+- **Logging:** Deferred to a future increment (see Increment: Logging)
 - **Deployment frequency:** Manual — notebook import pinned to a specific commit hash (see Version Pinning)
 
 ---
@@ -51,21 +51,22 @@ Users who can open a web link and operate a simple website, but don't use comput
 ### Intended Behavior
 The Colab notebook is a self-contained application that:
 
-**Reads sheet ID from user input:**
+**Reads sheet URL from user input:**
 - The notebook contains a clearly labelled input cell at the very top
-- The Google Sheet displays the `sheets_id` value below the Colab link with instructions: _"Copy the ID below and paste it into the first cell of the notebook"_
-- The `sheets_id` is the alphanumeric identifier only (not the full URL), extracted from the sheet's own URL via a formula in the template sheet
+- The Google Sheet displays the sheet URL below the Colab link with instructions: _"Copy the link below and paste it into the first cell of the notebook"_
+- The notebook accepts either a full Google Sheets URL or a bare sheet ID
 
-**Authenticates to Google Sheets:**
-- Uses `google.colab.auth.authenticate_user()` to prompt the user for OAuth consent
-- Authentication persists for the duration of the Colab session
-- Users see: _"This app wants permission to see your Google Sheets"_ consent popup once per session
-- The notebook keeps the Colab session alive via a periodic background ping (see Session Persistence below)
+**Validates and normalises input:**
+- Accepts a full Google Sheets URL (`https://docs.google.com/spreadsheets/d/<ID>/...`) or a bare sheet ID
+- Extracts the sheet ID from the URL using a regex match on `spreadsheets/d/([a-zA-Z0-9_-]+)`
+- Strips leading/trailing whitespace
+- Shows a user-friendly error if the input matches neither pattern (e.g. _"That doesn't look like a Google Sheets link. Please copy the link from the sheet and try again."_)
+- Does not proceed to fetch if validation fails
 
 **Reads the user's Google Sheet:**
-- Uses the pasted `sheets_id` to identify which Sheet to read
-- Extracts notes/data from the sheet
-- Supports sheets owned by the user as well as sheets shared to the user by others (OAuth authenticates as the user, so all sheets that user can access are readable)
+- Uses the extracted sheet ID to construct a public CSV export URL
+- No API key or OAuth required — sheet must be accessible to "anyone with link can view"
+- Calls the existing `fetch.py` module directly
 
 **Provides editable parameters:**
 - Displays cells with default values for `break` and `tempo`
@@ -82,41 +83,77 @@ The Colab notebook is a self-contained application that:
 - Users can copy/click the URL
 
 **Error handling:**
-- Catches exceptions from sheets-to-banana or Google Sheets API
+- Catches exceptions from sheets-to-banana or the CSV fetch
 - Displays user-friendly error messages only (no Python tracebacks)
-- Example: _"Could not read your Google Sheet. Please check the sheet ID and try again."_
+- Includes a support contact in all error messages (e.g. _"If this keeps happening, contact [email]."_)
+- Example: _"Could not read your Google Sheet. Please check the link and try again. If this keeps happening, contact [email]."_
 - Does NOT generate a BananaDrum URL if an error occurs
 
 ---
 
 ## Session Persistence
-To minimise how often users are prompted for OAuth re-authentication, the notebook includes an embedded background task that periodically pings the Colab runtime to keep the session alive for as long as possible (up to Colab's free tier maximum of ~12 hours). This logic is part of the notebook itself and does not depend on any external script.
+To minimise how often users are interrupted by Colab session timeouts, the notebook runs a background daemon thread on startup that prevents the Python kernel from being killed due to inactivity:
+
+```python
+import threading, time
+
+def _keep_alive():
+    while True:
+        time.sleep(60)
+
+_t = threading.Thread(target=_keep_alive, daemon=True)
+_t.start()
+```
+
+This extends the kernel's active window up to Colab's free tier maximum (~12 hours). It does not bypass Colab's hard session limits. This logic is part of the notebook itself and does not depend on any external script.
 
 ---
 
 ## Version Pinning
-The notebook imports the sheets-to-banana Python module from GitHub pinned to a **specific commit hash**, not `main`:
+The notebook installs the sheets-to-banana Python module from GitHub pinned to a **specific commit hash**, not `main`:
 
+```python
+import subprocess
+subprocess.run(["pip", "install", "uv", "-q"], check=True)
+subprocess.run(
+    ["uv", "pip", "install", "--system", "-q",
+     "git+https://github.com/bruno-ritmista/samba@<COMMIT_HASH>#egg=sheets-to-banana"],
+    check=True
+)
 ```
-pip install git+https://github.com/bruno-ritmista/samba@<COMMIT_HASH>#egg=sheets-to-banana
-```
+
+UV is used instead of pip for significantly faster installs (typically 3–10x), reducing the time users wait on the setup cell.
 
 This ensures no changes reach users unintentionally.
 
-**Future improvement:** Set up GitHub Actions to run automated tests on the Python module. Based on passing tests, the commit hash in the notebook is manually updated to the validated commit. This creates a controlled release pipeline before expanding to automated deployment.
+---
+
+## Increment 2: Automated Deployment Validation and Notebook Update Process
+
+When the Python module is updated and a new commit is ready for release:
+
+1. **CI validation:** GitHub Actions runs the existing test suite (`pytest`) against the new commit on push to `main`
+2. **Manual release step:** On passing tests, the deployer updates the commit hash in the notebook file on GitHub and pushes the change
+3. **Verification:** All users who open the Colab link after the push automatically receive the new version (Colab fetches the notebook from GitHub at open time)
+
+This creates a controlled release pipeline. Notebook updates are a deliberate manual step — not automated pushes — giving the deployer a final review gate before users are affected.
+
+**Future improvement:** Automate the hash update step via a GitHub Actions workflow that updates the notebook file and opens a PR for review, triggered by passing CI on `main`.
 
 ---
 
-## Logging
+## Increment 3: Logging
+
 All notebook executions are logged to a Google Cloud destination accessible only to the script author.
 
-**What is logged:** timestamp, user email (from OAuth), sheet ID processed.
+**What is logged:** timestamp, sheet ID processed.
+
+**Privacy note:** If user email is logged in future, a visible disclosure must be added to the notebook (GDPR/LGPD requirement). At minimum, the notebook should state what data is collected.
 
 **Implementation:**
 - A dedicated Google Cloud service account is created with minimal permissions (write-only access to the logging destination)
-- The service account JSON key is stored in Colab Secrets (not in the notebook code or GitHub repo)
-- The notebook retrieves the key from Colab Secrets at runtime and authenticates as the service account to write log entries
-- Users cannot see or access these logs — the service account is isolated from the user's own Google account
+- The service account credentials are embedded in the notebook in a write-only, narrowly scoped form (Colab Secrets are per-user and cannot be accessed from other users' sessions — a different approach is required, e.g. a backend proxy or a write-only embedded token)
+- Users cannot access or modify these logs
 
 **Purpose:** Monitor usage trends and detect if traffic approaches or exceeds capacity expectations. The ~100 requests/day figure is a rough architectural guideline, not a hard-enforced limit. If logs show sustained growth beyond this, the architecture will be revisited.
 
@@ -127,14 +164,14 @@ All notebook executions are logged to a Google Cloud destination accessible only
 | Risk | Status |
 |---|---|
 | Colab outages or free tier quota exceeded | **Accepted.** If Colab hits quota, the notebook opens but cells fail to run. No fallback or status page planned at this stage. |
-| Google Sheets API quota limits | **Accepted.** Monitored via GCP console. Not enforced at application level. Will be addressed if logs show traffic approaching limits. |
-| OAuth re-authentication on new sessions | **Accepted.** Users authenticate once per session. Session keep-alive reduces frequency. |
+| Google Sheets CSV export unavailable | **Accepted.** Monitored indirectly via error reports. If the public CSV export URL changes behaviour, `fetch.py` will need updating. |
+| Session timeout after ~12 hours | **Accepted.** Users authenticate once per session. Session keep-alive reduces frequency of kernel restarts within the 12-hour window. |
 | Mobile users cannot use the notebook effectively | **Accepted.** Desktop-only. Documented explicitly. |
 
 ---
 
 ## Out of Scope (Future Iterations)
 - Mobile-friendly interface (requires notebook redesign)
-- Automated commit hash updates via GitHub Actions CI/CD
 - Hard rate limiting enforcement
 - Fallback hosting if Colab is unavailable
+- Automated commit hash updates via GitHub Actions CI/CD (currently a manual step after CI passes)
