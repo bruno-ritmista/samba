@@ -46,7 +46,7 @@ Users who can open a web link and operate a simple website, but don't use comput
 
 ---
 
-## Increment 1: Create Python Notebook to Call sheets-to-banana
+## ✅ Increment 1: Create Python Notebook to Call sheets-to-banana
 
 ### Intended Behavior
 The Colab notebook is a self-contained application that:
@@ -85,8 +85,7 @@ The Colab notebook is a self-contained application that:
 **Error handling:**
 - Catches exceptions from sheets-to-banana or the CSV fetch
 - Displays user-friendly error messages only (no Python tracebacks)
-- Includes a support contact in all error messages (e.g. _"If this keeps happening, contact [email]."_)
-- Example: _"Could not read your Google Sheet. Please check the link and try again. If this keeps happening, contact [email]."_
+- Example: _"Could not read your Google Sheet. Please check the link and try again."_
 - Does NOT generate a BananaDrum URL if an error occurs
 
 ---
@@ -128,7 +127,7 @@ This ensures no changes reach users unintentionally.
 
 ---
 
-## Increment 2: Automated Deployment Validation and Notebook Update Process
+## ⌛ Increment 2: Automated Deployment Validation and Notebook Update Process
 
 When the Python module is updated and a new commit is ready for release:
 
@@ -142,7 +141,7 @@ This creates a controlled release pipeline. Notebook updates are a deliberate ma
 
 ---
 
-## Increment 3: Logging
+## ⌛ Increment 3: Logging
 
 All notebook executions are logged to a Google Cloud destination accessible only to the script author.
 
