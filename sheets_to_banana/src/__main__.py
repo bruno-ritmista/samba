@@ -98,6 +98,7 @@ def main() -> None:
             logger.info("  %-20s  %d hits", name, hit_count)
 
         clean_break = re.sub(r'\s*\(.*\)\s*$', '', brk.name).strip()
+        clean_break = re.sub(r'(?i)\s*[-\s_]*banana[-\s_]*drum[-\s_]*', '', clean_break).strip(' \t-_')
         title = f"{song_short} - {clean_break}" if song_short else clean_break
         url = encode_url(tracks, tempo=args.tempo, n_bars=n_bars, title=title)
         print(url)

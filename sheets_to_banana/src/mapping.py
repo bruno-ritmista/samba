@@ -61,7 +61,16 @@ def _map(note: str, table: dict[str, str], instrument: str, warn: bool = True) -
         key = (note, instrument)
         if key not in _warned:
             _warned.add(key)
-            logger.warning("Note '%s' for instrument '%s' has no matching note in BananaDrum — will be left blank", note, instrument)
+            if ' ' in note:
+                logger.warning(
+                    "Instrument '%s' has a note ('%s') that does not seem to be in 4/4 nor 6/8 time signature, so it is not supported by the conversion tool yet. It will be skipped.",
+                    instrument, note,
+                )
+            else:
+                logger.warning(
+                    "Note '%s' for instrument '%s' is not supported by the conversion tool. It will be skipped.",
+                    note, instrument,
+                )
     return result
 
 

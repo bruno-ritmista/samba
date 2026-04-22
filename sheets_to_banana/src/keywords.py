@@ -69,8 +69,8 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
         pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
         if pattern is None:
             logger.warning(
-                'No pattern for keyword %r with instrument %r; filling %d step(s) with rests',
-                cell, instrument, span,
+                "Note '%s' for instrument '%s' is not supported by the conversion tool. It will be skipped.",
+                cell, instrument,
             )
             result.extend(['0'] * span)
         else:
