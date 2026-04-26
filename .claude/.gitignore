@@ -3,7 +3,6 @@
 */
 
 # Track specific subdirectories and files
-!.skills/
 !.skills/understand-bananadrum/
 !.skills/understand-sapu-music-notes/
 !.gitignore
