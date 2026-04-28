@@ -183,6 +183,8 @@ def parse_sheet(csv_text: str) -> list[Break]:
         List of Break objects in sheet order. Returns an empty list for
         empty input.
     """
+    if not csv_text:
+        return []
     reader = csv.reader(io.StringIO(csv_text))
     breaks: list[Break] = []
     current_break: Break | None = None

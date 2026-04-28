@@ -14,9 +14,12 @@ Encoding:
   - The resulting integer is encoded in base 64 using characters 0-9a-zA-Z~_
 """
 
+import logging
 from urllib.parse import quote
 
 from sheets_to_banana.mapping import MappedPolyrhythm, MappedTrack
+
+logger = logging.getLogger(__name__)
 
 # Base-64 character table matching BananaDrum's urlNumberToCharacter
 _B64 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~_'
@@ -122,6 +125,7 @@ def encode_url(
         A full https://bananadrum.net/ URL.
     """
     if not tracks:
+        logger.error("No tracks to encode")
         raise ValueError("No tracks to encode")
 
     steps = len(tracks[0].notes)

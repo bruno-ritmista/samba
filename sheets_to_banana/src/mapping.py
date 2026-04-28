@@ -188,10 +188,10 @@ def trim_empty_bars(tracks: list[MappedTrack]) -> TrimResult:
 
     Returns:
         TrimResult with the (possibly shorter) tracks and trim counts.
-        If every bar is empty, all_empty=True and tracks is the original list.
+        If every bar is empty, all_empty=True and tracks is an empty list.
     """
     if not tracks:
-        return TrimResult(tracks=tracks, lead_bars=0, trail_bars=0, all_empty=True)
+        return TrimResult(tracks=[], lead_bars=0, trail_bars=0, all_empty=True)
 
     bar_count = len(tracks[0].notes) // 16
 
@@ -212,7 +212,7 @@ def trim_empty_bars(tracks: list[MappedTrack]) -> TrimResult:
         trail_bars += 1
 
     if lead_bars + trail_bars >= bar_count:
-        return TrimResult(tracks=tracks, lead_bars=lead_bars, trail_bars=trail_bars, all_empty=True)
+        return TrimResult(tracks=[], lead_bars=lead_bars, trail_bars=trail_bars, all_empty=True)
 
     start = lead_bars * 16
     end = (bar_count - trail_bars) * 16

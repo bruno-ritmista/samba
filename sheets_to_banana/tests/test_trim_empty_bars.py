@@ -78,11 +78,13 @@ def test_all_empty_returns_all_empty_flag():
     notes = empty_bar() * 4
     result = trim_empty_bars([make_track(notes)])
     assert result.all_empty
+    assert result.tracks == []
 
 
 def test_all_empty_single_bar():
     result = trim_empty_bars([make_track(empty_bar())])
     assert result.all_empty
+    assert result.tracks == []
 
 
 # ── empty input ───────────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ def test_all_empty_single_bar():
 def test_no_tracks_returns_all_empty():
     result = trim_empty_bars([])
     assert result.all_empty
+    assert result.tracks == []
 
 
 # ── multiple tracks ───────────────────────────────────────────────────────────
