@@ -1,22 +1,36 @@
 # sheets_to_banana
 
-Converts a Google Sheet of samba percussion notes into a shareable BananaDrum link.
-
 ## What it does
 
-Takes a public Google Sheets URL containing percussion notes in a custom table-based format and generates a URL to play those notes in [BananaDrum](https://bananadrum.net).
+Converts samba percursion notes in custom table-based format from Google Sheets into a [BananaDrum](https://www.bannadrum.net) link.
 
 ## Usage
 
-From the repo root:
+### Python notebook in Google Collab
+
+Open the [sheets_to_banana python notebook in Google Collab]() then follow the instructions in the notebook.
+
+
+### Python scripts on your device
+
+Clone the repository and navigate to it:
 
 ```bash
+git clone https://github.com/bruno-ritmista/samba.git
+cd samba
+```
+
+**Option A — Run directly from the repository root (no install required):**
+
+```bash
+pip install -r sheets_to_banana/requirements.txt
 python sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 ```
 
-Or, if the package is installed:
+**Option B — Install the package, then run as a module:**
 
 ```bash
+pip install sheets_to_banana/
 python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 ```
 
@@ -31,9 +45,3 @@ python sheets_to_banana https://docs.google.com/spreadsheets/d/ABC123/edit --bre
 ```
 
 The script prints the BananaDrum URL to stdout.
-
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
