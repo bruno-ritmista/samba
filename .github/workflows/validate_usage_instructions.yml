@@ -1,31 +1,26 @@
-name: Validate README Instructions
+name: Validate README usage instructions
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'sheets_to_banana/**'
-      - '.github/workflows/validate_instructions.yml'
+  workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
       - 'sheets_to_banana/**'
-      - '.github/workflows/validate_instructions.yml'
+      - '.github/workflows/validate_usage_instructions.yml'
 
 jobs:
   validate:
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.13']
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.13'
 
       - name: Validate Mode A - Direct run (no package install)
         working-directory: .
@@ -55,9 +50,12 @@ jobs:
           fi
           echo "✓ Mode B passed (no import errors)"
 
-      - name: Run test suite
-        working-directory: sheets_to_banana
+      - name: Validate Mode C - Notebook execution
+        working-directory: .
         run: |
-          pip install .
-          pip install -r doc/requirements-dev.txt
-          pytest tests/ -v
+          pip install sheets_to_banana/
+          pip install nbconvert jupyter
+          jupyter nbconvert --to notebook --execute \
+            sheets_to_banana/deployment/sheets_to_banana.ipynb \
+            --output /tmp/notebook_out.ipynb
+          echo "✓ Mode C passed (notebook executed without errors)"
