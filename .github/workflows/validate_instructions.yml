@@ -58,6 +58,6 @@ jobs:
       - name: Run test suite
         working-directory: sheets_to_banana
         run: |
-          pip install -r requirements.txt
+          pip install .
           pip install -r doc/requirements-dev.txt
           pytest tests/ -v
