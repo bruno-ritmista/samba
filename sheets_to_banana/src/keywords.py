@@ -1,0 +1,85 @@
+"""Increment 7: Expand keyword cells to predefined note sequences."""
+
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+# Characters that constitute a valid note cell (single or multi-char)
+_NOTE_CHARS_RE = re.compile(r'^[XxOSLH/KWD0-9]+$', re.IGNORECASE)
+
+# (keyword_lower, instrument_kind) → note sequence
+_KEYWORD_TABLE: dict[tuple[str, str], list[str]] = {
+    ('levada', 'surdo_split'):  '2 0 0 1 0 0 0 2 0 0 0 1 0 0 0 0'.split(),
+    ('levada', 'high_surdo'):   '0 0 0 0 X 0 X 0 0 0 0 0 X X 0 X'.split(),
+    ('levada', 'repique'):      'X x / O X x / O X x / O X x / O'.split(),
+    ('levada', 'caixa'):        'X X x / X x / x X x / x X x / x'.split(),
+    ('levada', 'tamborim'):     'X x x x X x x x X x x x X x x x'.split(),
+    ('levada', 'chocalho'):     'X x x x X x x x X x x x X x x x'.split(),
+    ('levada', 'agogo'):        'L 0 0 H H 0 L 0 L 0 H 0 H 0 0 L'.split(),
+    ('virada', 'surdo_split'):  '2 0 0 0 0 1 0 0'.split(),
+    ('virada', 'high_surdo'):   '0 0 0 0 0 0 X 0'.split(),
+    ('virada', 'repique'):      'X x / O X 0 / 0'.split(),
+    ('virada', 'caixa'):        'X X x / X 0 x 0'.split(),
+    ('virada', 'tamborim'):     'X x x x X 0 x 0'.split(),
+    ('virada', 'chocalho'):     'X x x x X 0 x 0'.split(),
+    ('virada', 'agogo'):        'L 0 0 H H 0 L 0'.split(),
+}
+
+
+def _classify(name: str) -> str:
+    """Map a raw instrument name to its canonical kind for table lookup."""
+    n = name.lower()
+    if 'surdo' in n:
+        return 'high_surdo' if ('mor' in n or '3' in n) else 'surdo_split'
+    if 'repique' in n or 'repinique' in n: return 'repique'
+    if 'caixa'    in n: return 'caixa'
+    if 'tamborim' in n: return 'tamborim'
+    if 'chocalho' in n: return 'chocalho'
+    if 'agog'     in n: return 'agogo'
+    return n  # fallback: normalised raw name
+
+
+def _is_keyword(cell: str) -> bool:
+    return bool(cell) and ' ' not in cell and not _NOTE_CHARS_RE.match(cell)
+
+
+def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
+    """Replace keyword cells with their predefined note sequences.
+
+    Each element of `cells` is either a note character, an empty string
+    (rest from a non-merged cell), or a keyword string.  Returns a flat
+    list of the same total length with keywords replaced by note characters.
+    """
+    kind = _classify(instrument)
+    result: list[str] = []
+    i = 0
+    while i < len(cells):
+        cell = cells[i]
+        if not _is_keyword(cell):
+            result.append(cell)
+            i += 1
+            continue
+
+        # Span = keyword cell + consecutive following empty cells (merged range)
+        span = 1
+        while i + span < len(cells) and cells[i + span] == '':
+            span += 1
+
+        pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
+        if pattern is None:
+            logger.warning(
+                "Note '%s' for instrument '%s' is not supported by the conversion tool. It will be skipped.",
+                cell, instrument,
+            )
+            result.extend(['0'] * span)
+        else:
+            # Slice from the pattern at the beat-aligned offset so that a
+            # keyword on beat 2 (i=4) gets notes 5-8, beat 3 gets 9-12, etc.
+            offset = i % len(pattern)
+            tiled = pattern * ((offset + span) // len(pattern) + 1)
+            result.extend(tiled[offset:offset + span])
+
+        i += span
+
+    return result

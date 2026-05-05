@@ -1,0 +1,28 @@
+name: Test suite
+
+on:
+  workflow_run:
+    workflows: ["Validate README usage instructions"]
+    types: [completed]
+
+jobs:
+  test:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Run test suite
+        working-directory: sheets_to_banana
+        run: |
+          pip install .
+          pip install -r doc/requirements-dev.txt
+          pytest tests/ -v

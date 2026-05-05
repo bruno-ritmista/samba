@@ -1,0 +1,61 @@
+name: Validate README usage instructions
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'sheets_to_banana/**'
+      - '.github/workflows/validate_usage_instructions.yml'
+
+jobs:
+  validate:
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Validate Mode A - Direct run (no package install)
+        working-directory: .
+        run: |
+          pip install -r sheets_to_banana/requirements.txt
+          python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
+          # Verify no ModuleNotFoundError (should only fail on HTTP/fetch error)
+          if python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+            echo "Mode A failed: ModuleNotFoundError present"
+            exit 1
+          fi
+          echo "✓ Mode A passed (no import errors)"
+
+      - name: Validate Mode B - Installed module (pip install)
+        working-directory: .
+        run: |
+          # Fresh venv to test clean install
+          python -m venv test_env
+          . test_env/bin/activate
+          pip install --upgrade pip
+          pip install sheets_to_banana/
+          python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
+          # Verify no ModuleNotFoundError
+          if python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+            echo "Mode B failed: ModuleNotFoundError present"
+            exit 1
+          fi
+          echo "✓ Mode B passed (no import errors)"
+
+      - name: Validate Mode C - Notebook execution
+        working-directory: .
+        run: |
+          pip install sheets_to_banana/
+          pip install nbconvert jupyter
+          jupyter nbconvert --to notebook --execute \
+            sheets_to_banana/deployment/sheets_to_banana.ipynb \
+            --output /tmp/notebook_out.ipynb
+          echo "✓ Mode C passed (notebook executed without errors)"

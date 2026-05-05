@@ -1,0 +1,8 @@
+# Ignore everything in .claude/ by default
+*
+*/
+
+# Track specific subdirectories and files
+!.skills/understand-bananadrum/
+!.skills/understand-sapu-music-notes/
+!.gitignore
