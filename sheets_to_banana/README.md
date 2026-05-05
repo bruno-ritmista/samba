@@ -8,7 +8,7 @@ Converts samba percursion notes in custom table-based format from Google Sheets 
 
 ### Python notebook in Google Collab
 
-Open the [sheets_to_banana python notebook in Google Collab]() then follow the instructions in the notebook.
+Open the [sheets_to_banana python notebook in Google Collab](https://colab.research.google.com/github/bruno-ritmista/samba/blob/main/sheets_to_banana/deployment/sheets_to_banana.ipynb) then follow the instructions in the notebook.
 
 
 ### Python scripts on your device
