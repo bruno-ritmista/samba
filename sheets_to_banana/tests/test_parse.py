@@ -72,7 +72,7 @@ def test_instrument_notes_length_is_64_per_bar_group():
     csv_text = make_csv(
         break_header('Break A'),
         section_label(),
-        instrument_row('Caixa', ['X'] * 16 + [''] * 48),
+        instrument_row('Caixa', ['X'] * 64),  # hits in all 4 bars → no trailing trim
     )
     breaks = parse_sheet(csv_text)
     assert len(breaks[0].tracks['Caixa']) == 64
@@ -90,8 +90,9 @@ def test_empty_cell_becomes_rest():
 
 
 def test_levada_expands_to_pattern_for_caixa():
-    """'Levada' spanning 16 cols on Caixa should expand to the full levada/Caixa pattern."""
-    notes = ['Levada'] + [''] * 15 + ['X'] + [''] * 47  # keyword spans 16, then a note
+    """Four single-beat levada cells on Caixa should expand to the full 16-note pattern."""
+    # Each levada keyword spans exactly 4 cols (1 beat); 4 beats fill bar 1
+    notes = (['levada'] + [''] * 3) * 4 + [''] * 48
     csv_text = make_csv(
         break_header('B'),
         section_label(),
@@ -100,7 +101,6 @@ def test_levada_expands_to_pattern_for_caixa():
     track = parse_sheet(csv_text)[0].tracks['Caixa']
     expected = 'X X x / X x / x X x / x X x / x'.split()
     assert track[:16] == expected
-    assert track[16] == 'X'
 
 
 def test_levada_beat_position_selects_correct_slice():
@@ -120,8 +120,9 @@ def test_levada_beat_position_selects_correct_slice():
 
 
 def test_virada_expands_to_pattern_for_caixa():
-    """'Virada' spanning 16 cols on Caixa should expand to the virada/Caixa pattern."""
-    notes = ['Virada'] + [''] * 15 + [''] * 48
+    """Two single-beat virada cells on Caixa should expand to the full 8-note pattern."""
+    # Virada is an 8-note pattern covering 2 beats (2 × 4-col keyword cells)
+    notes = (['Virada'] + [''] * 3) * 2 + [''] * 56
     csv_text = make_csv(
         break_header('B'),
         section_label(),
@@ -157,6 +158,56 @@ def test_unknown_keyword_fills_with_rests():
     assert all(n == '0' for n in track[:16])
 
 
+def test_levada_on_beats_1_to_3_produces_1_bar_track():
+    """Issue #7: levada on beats 1-3 only should produce a 1-bar (16-step) track.
+
+    Old bug: the last levada keyword greedily consumed the remaining 52 empty cols,
+    producing a 64-step track with n_bars=4 in the BananaDrum URL.
+    Fix: each keyword spans at most 4 steps; trailing all-rest bars are trimmed.
+    """
+    # beats 1-3: levada (4 cols each), beat 4: empty for non-surdo
+    notes = (['levada'] + [''] * 3) * 3 + [''] * 52
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', notes),
+    )
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    caixa_pattern = 'X X x / X x / x X x / x X x / x'.split()
+    assert len(track) == 16                       # trimmed to 1 bar, not 4
+    assert track[0:4] == caixa_pattern[0:4]       # beat 1
+    assert track[4:8] == caixa_pattern[4:8]       # beat 2
+    assert track[8:12] == caixa_pattern[8:12]     # beat 3
+    assert all(n == '0' for n in track[12:16])    # beat 4 is silent
+
+
+def test_keyword_span_capped_at_one_beat():
+    """A keyword followed by many trailing empty cols expands at most 4 steps."""
+    # Single levada at beat 3 (col 8), followed by 55 empty cols
+    notes = [''] * 8 + ['levada'] + [''] * 55
+    caixa_pattern = 'X X x / X x / x X x / x X x / x'.split()
+    from sheets_to_banana.keywords import expand_keywords
+    result = expand_keywords('Caixa', notes)
+    # Cols 8-11 should be the beat-3 slice of the levada pattern (offset=8)
+    assert result[8:12] == caixa_pattern[8:12]
+    # Cols 12-63 should remain empty (not filled with levada)
+    assert all(c == '' for c in result[12:])
+
+
+def test_trailing_all_rest_bars_trimmed():
+    """A break with content only in bar 1 produces a 16-step track, not 64."""
+    notes = ['X'] + [''] * 15 + [''] * 48   # only bar 1, step 0 has a hit
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Caixa', notes),
+    )
+    track = parse_sheet(csv_text)[0].tracks['Caixa']
+    assert len(track) == 16
+    assert track[0] == 'X'
+    assert all(n == '0' for n in track[1:])
+
+
 def test_note_characters_preserved():
     """Note chars like X, 1, 2, O, OO, /, W, S, D should pass through unchanged."""
     chars = ['X', '1', '2', 'O', 'OO', '/', 'W', 'S', 'D', 'x', 'L', 'H']
@@ -174,9 +225,9 @@ def test_note_characters_preserved():
 # ── Z-pattern: multiple bar groups concatenated ───────────────────────────────
 
 def test_two_bar_groups_concatenated():
-    """Notes from bars 1-4 and bars 5-8 are joined into one 128-step list."""
+    """Notes from bars 1-4 and bars 5-8 are joined into one flat list."""
     notes_group1 = ['X'] + [''] * 63     # beat 1 in bar 1
-    notes_group2 = [''] * 15 + ['X'] + [''] * 48  # beat 4 in bar 4 of group 2
+    notes_group2 = [''] * 15 + ['X'] + [''] * 48  # step 15 in bar 1 of group 2
 
     csv_text = make_csv(
         break_header('B'),
@@ -187,7 +238,8 @@ def test_two_bar_groups_concatenated():
         instrument_row('Caixa', notes_group2),
     )
     track = parse_sheet(csv_text)[0].tracks['Caixa']
-    assert len(track) == 128
+    # last active step is 64+15=79; trimmed to next 16-step boundary → 80 steps
+    assert len(track) == 80
     assert track[0] == 'X'              # position 0 in group 1
     assert track[64 + 15] == 'X'        # position 15 in group 2
 
@@ -248,7 +300,7 @@ def test_breaks_have_independent_tracks():
 # ── absent instruments get padded ─────────────────────────────────────────────
 
 def test_instrument_absent_from_second_bar_group_padded_with_rests():
-    """Caixa is in group 1 but not group 2 → its track is padded to 128 steps."""
+    """Caixa is in group 1 but not group 2 → padded with rests, trimmed to last active bar."""
     csv_text = make_csv(
         break_header('B'),
         section_label('1 - 4'),
@@ -261,13 +313,14 @@ def test_instrument_absent_from_second_bar_group_padded_with_rests():
     breaks = parse_sheet(csv_text)
     caixa = breaks[0].tracks['Caixa']
     repique = breaks[0].tracks['Repique']
-    assert len(caixa) == 128
-    assert len(repique) == 128
-    assert all(n == '0' for n in caixa[64:])  # second group is all rests
+    # Repique has a hit at step 64; last_active=64; trimmed to 5 bars=80 steps
+    assert len(caixa) == 80
+    assert len(repique) == 80
+    assert all(n == '0' for n in caixa[1:])  # Caixa only active at step 0
 
 
 def test_instrument_absent_from_first_bar_group_padded_with_rests():
-    """Repique is not in group 1 but is in group 2 → 64 leading rests."""
+    """Repique is not in group 1 but is in group 2 → 64 leading rests, trimmed after last hit."""
     csv_text = make_csv(
         break_header('B'),
         section_label('1 - 4'),
@@ -279,7 +332,8 @@ def test_instrument_absent_from_first_bar_group_padded_with_rests():
     )
     breaks = parse_sheet(csv_text)
     repique = breaks[0].tracks['Repique']
-    assert len(repique) == 128
+    # Caixa and Repique both hit at step 64; last_active=64; trimmed to 5 bars=80 steps
+    assert len(repique) == 80
     assert all(n == '0' for n in repique[:64])  # first group is all rests
 
 
@@ -300,7 +354,7 @@ def test_section_label_row_not_added_as_instrument():
 # ── short rows don't crash ────────────────────────────────────────────────────
 
 def test_short_instrument_row_padded_to_64():
-    """A row with fewer than 65 columns should be treated as having trailing rests."""
+    """A row with fewer than 65 columns is treated as having trailing rests, then trimmed."""
     import io, csv
     # Manually write a row with only 5 note columns
     buf = io.StringIO()
@@ -309,7 +363,8 @@ def test_short_instrument_row_padded_to_64():
     writer.writerow(['1 - 4'])
     writer.writerow(['Caixa', 'X', '', 'X', '', 'X'])   # only 5 note cols
     track = parse_sheet(buf.getvalue())[0].tracks['Caixa']
-    assert len(track) == 64
+    # last hit at step 4 → trimmed to bar boundary at step 16
+    assert len(track) == 16
     assert track[0] == 'X'
     assert track[2] == 'X'
     assert track[4] == 'X'

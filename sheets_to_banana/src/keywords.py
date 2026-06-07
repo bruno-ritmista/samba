@@ -65,6 +65,7 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
         span = 1
         while i + span < len(cells) and cells[i + span] == '':
             span += 1
+        span = min(span, 4)  # keywords always cover exactly one beat (4 sixteenth-note steps)
 
         pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
         if pattern is None:
