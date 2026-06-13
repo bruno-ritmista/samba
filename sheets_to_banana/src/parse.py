@@ -140,16 +140,29 @@ def _normalize_note(cell: str) -> str:
 
 
 def _finalize_break(brk: Break) -> None:
-    """Pad all tracks in a break to the same length with rests.
+    """Pad all tracks to the same length, then trim trailing all-rest bars.
 
     Instruments that appear in only some bar groups end up shorter than
-    others. This pads them so every track in the break has equal length.
+    others. This pads them so every track in the break has equal length,
+    then trims trailing bars that are entirely rests across all tracks.
     """
     if not brk.tracks:
         return
     max_len = max(len(v) for v in brk.tracks.values())
     for notes in brk.tracks.values():
         notes.extend(['0'] * (max_len - len(notes)))
+
+    # Find the last step with a non-rest note across all tracks
+    last_active = -1
+    for notes in brk.tracks.values():
+        for i in range(len(notes) - 1, -1, -1):
+            if notes[i] != '0':
+                last_active = max(last_active, i)
+                break
+    if last_active >= 0:
+        trimmed_len = ((last_active // 16) + 1) * 16
+        for notes in brk.tracks.values():
+            del notes[trimmed_len:]
 
 
 def parse_song_title(csv_text: str) -> str:
