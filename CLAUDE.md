@@ -77,26 +77,6 @@ Each track is a base-N integer (N = number of hit styles + 1) encoded in custom 
 | `doc/design-plan.md` | 8 completed increments; explains the motivation behind each piece |
 | `deployment/sheets_to_banana.ipynb` | Google Colab notebook for end users |
 
-## Workflow: Issues and New Features
-
-When asked to work on a GitHub issue or implement a new feature, always use a dedicated git worktree and branch — never work directly on `main`.
-
-**Steps to follow before writing any code:**
-
-1. **Check if the issue has a pre-defined branch.** Run `gh issue view <number>` and look for a linked branch, or check `git branch -r` for a matching remote branch (e.g. `bugfix/issue-<number>-*` or similar).
-2. **If a branch already exists**, check it out into a new worktree:
-   ```bash
-   git worktree add ../worktrees/<branch-name> <branch-name>
-   ```
-3. **If no branch exists**, propose a branch name following the convention `<type>/<short-description>` (e.g. `feature/add-virada-keyword`, `bugfix/fix-levada-overflow`) and confirm with the user before creating it:
-   ```bash
-   git worktree add -b <branch-name> ../worktrees/<branch-name> main
-   ```
-4. Work exclusively inside the worktree directory for all edits and tests.
-5. When done, remind the user to create a PR from the branch and clean up the worktree with `git worktree remove`.
-
-**Never skip this** — even for small changes. Parallel branches require worktrees to avoid checkout conflicts.
-
 ## Domain Skills
 
 Two Claude skills in `.claude/.skills/` capture domain knowledge not derivable from the code:

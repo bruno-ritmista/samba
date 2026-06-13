@@ -27,3 +27,6 @@ desktop.ini
 dist/
 build/
 *.egg-info/
+
+# Personal preferences (not shared)
+.claude/preferences*.md
