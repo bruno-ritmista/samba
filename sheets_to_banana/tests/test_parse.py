@@ -539,3 +539,63 @@ def test_orphaned_bar_group_creates_unnamed_break():
     assert len(breaks) == 1
     assert breaks[0].name == ''
     assert 'Caixa' in breaks[0].tracks
+
+
+# ── Corte keyword on Surdo 3 (issue #6) end-to-end ────────────────────────────
+
+def test_short_corte_full_pattern():
+    """Short corte: Surdo 3 with Corte on bar1 beats 2-4 → 16-note High Surdo track.
+
+    Beats 2,3 are 'mid' ('0 0 X 0'); beat 4 is the run's end ('0 X 0 X').
+    Encodes to the issue's expected '74Tw' segment.
+    """
+    from sheets_to_banana.mapping import map_break
+    from sheets_to_banana.encode import encode_url
+
+    # Corte at idx 4, 8, 12 (beats 2,3,4 of bar 1); beat 1 and the rest empty
+    notes = [''] * 4 + (['Corte'] + [''] * 3) * 3 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Surdo 3', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    high_surdo = [t for t in tracks if t.instrument_id == '7']
+    assert len(high_surdo) == 1
+    expected = '0 0 0 0 0 0 X 0 0 0 X 0 0 X 0 X'.split()
+    expected = ['1' if c == 'X' else '0' for c in expected]
+    assert high_surdo[0].notes == expected
+
+    url = encode_url(tracks)
+    assert '.74Tw' in url      # the High Surdo track segment
+
+
+def test_long_corte_full_pattern():
+    """Long corte: Surdo 3 with Corte on bar1 beat2 → bar2 beat4 → 32-note track.
+
+    All but the last corte beat are 'mid'; the final beat (bar2 beat4) is 'end'.
+    Encodes to the issue's expected '7cuZDqjc' segment.
+    """
+    from sheets_to_banana.mapping import map_break
+    from sheets_to_banana.encode import encode_url
+
+    # Corte at idx 4,8,12,16,20,24,28 (bar1 beat2 → bar2 beat4)
+    notes = [''] * 4 + (['Corte'] + [''] * 3) * 7 + [''] * 32
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Surdo 3', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    high_surdo = [t for t in tracks if t.instrument_id == '7']
+    assert len(high_surdo) == 1
+    # hits at idx 6,10,14,18,22,26 (mid) and 29,31 (end)
+    expected = ['0'] * 32
+    for idx in (6, 10, 14, 18, 22, 26, 29, 31):
+        expected[idx] = '1'
+    assert high_surdo[0].notes == expected
+
+    url = encode_url(tracks)
+    assert '.7cuZDqjc' in url   # the High Surdo track segment
