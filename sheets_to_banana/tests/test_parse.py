@@ -650,3 +650,43 @@ def test_long_corte_full_pattern():
 
     url = encode_url(tracks)
     assert '.7cuZDqjc' in url   # the High Surdo track segment
+
+
+# ── 'Subida' keyword on Repique (issue #14) end-to-end ───────────────────────
+
+def test_short_subida_full_pattern():
+    """Short subida: Repique with Subida on bar1 beats 1-2 → climax pattern."""
+    from sheets_to_banana.mapping import map_break
+
+    notes = (['Subida'] + [''] * 3) * 2 + [''] * 56
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    repique = [t for t in tracks if t.instrument_id == '3']
+    assert len(repique) == 1
+    # beat 1 'X 0 / /' -> 1 0 3 3, beat 2 '0 W 0 O' -> 0 5 0 6
+    expected = '1 0 3 3 0 5 0 6'.split() + ['0'] * 8
+    assert repique[0].notes == expected
+
+
+def test_regular_subida_full_pattern():
+    """Regular subida: Repique with Subida on all 4 beats of bar1."""
+    from sheets_to_banana.mapping import map_break
+
+    notes = (['Subida'] + [''] * 3) * 4 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    repique = [t for t in tracks if t.instrument_id == '3']
+    assert len(repique) == 1
+    # beats 1-2 'X 0 / 0' -> 1 0 3 0, beat 3 'X 0 / /' -> 1 0 3 3, beat 4 '0 W 0 O' -> 0 5 0 6
+    expected = '1 0 3 0 1 0 3 0 1 0 3 3 0 5 0 6'.split()
+    assert repique[0].notes == expected
