@@ -441,6 +441,57 @@ def test_68_slot_assignment_trailing_space():
     assert pg.notes == ['X', 'O', '0']
 
 
+def test_68_slot_assignment_single_token_leading_space():
+    """'      X' (6 leading spaces + single token) → pause at start → ['0', '0', 'X']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', '      X', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['0', '0', 'X']
+
+
+def test_68_slot_assignment_single_token_trailing_space():
+    """'X      ' (single token + 6 trailing spaces) → pause at end → ['X', '0', '0']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', 'X      ', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['X', '0', '0']
+
+
+def test_68_slot_assignment_single_token_both_spaces():
+    """'  X  ' (leading + trailing spaces, single token) → note in middle → ['0', 'X', '0']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', '  X  ', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['0', 'X', '0']
+
+
+def test_68_bare_single_char_not_detected():
+    """'X' (no spaces at all) is not detected as a 6/8 cell → stays as normal 4/4."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', 'X', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    assert 'Repique' not in brk.polygroups or brk.polygroups['Repique'] == []
+
+
 def test_68_cell_truncated_warns_on_excess_tokens(caplog):
     """More than 3 tokens in a 6/8 cell emits a warning and keeps first 3."""
     import logging

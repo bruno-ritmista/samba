@@ -133,17 +133,40 @@ def test_polyrhythm_indices_shifted_after_leading_trim():
     assert mp.end == 3
 
 
-def test_polyrhythm_in_trimmed_bar_is_removed():
-    # bar 0 has a poly, bar 1 has a hit — leading trim removes bar 0 and its poly
+def test_bar_with_only_polyrhythm_content_is_not_empty():
+    # bar 0 has only a poly (notes all '0'), bar 1 has a hit — bar 0's poly has
+    # non-rest notes, so bar 0 is NOT empty and nothing is trimmed.
     poly = MappedPolyrhythm(start=0, end=3, notes=['1', '1', '1'])
     notes = empty_bar() + hit_bar()
-    # poly is in bar 0, which is all-rest in the track notes — but the poly itself
-    # would make this bar non-empty only if notes were non-zero. Since notes are all
-    # '0', bar 0 IS considered empty and is trimmed; the poly is discarded.
+    track = make_track(notes, polys=[poly])
+    result = trim_empty_bars([track])
+    assert not result.all_empty
+    assert result.lead_bars == 0
+    assert result.tracks[0].polyrhythms == [poly]
+
+
+def test_bar_with_only_all_rest_polyrhythm_is_empty():
+    # bar 0 has a poly whose notes are all '0' (a fully-rest polygroup), bar 1
+    # has a hit — bar 0 is still empty and is trimmed along with its poly.
+    poly = MappedPolyrhythm(start=0, end=3, notes=['0', '0', '0'])
+    notes = empty_bar() + hit_bar()
     track = make_track(notes, polys=[poly])
     result = trim_empty_bars([track])
     assert result.lead_bars == 1
     assert result.tracks[0].polyrhythms == []
+
+
+def test_all_polygroup_bar_not_trimmed_as_empty():
+    # A single bar where every step is '0' in `notes` but a polyrhythm spans
+    # the whole bar with real hits — this is the "all beats are polygroups"
+    # case from issue feedback; the bar must NOT be treated as empty.
+    poly = MappedPolyrhythm(start=0, end=15, notes=['1', '1', '1'])
+    notes = empty_bar()
+    track = make_track(notes, polys=[poly])
+    result = trim_empty_bars([track])
+    assert not result.all_empty
+    assert len(result.tracks[0].notes) == 16
+    assert result.tracks[0].polyrhythms == [poly]
 
 
 def test_polyrhythm_not_in_trimmed_region_preserved():
