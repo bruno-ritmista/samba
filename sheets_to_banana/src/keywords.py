@@ -10,14 +10,14 @@ _NOTE_CHARS_RE = re.compile(r'^[XxOSLH/KWD0-9]+$', re.IGNORECASE)
 
 # (keyword_lower, instrument_kind) → note sequence
 _KEYWORD_TABLE: dict[tuple[str, str], list[str]] = {
-    ('levada', 'surdo_split'):  '2 0 0 1 0 0 0 2 0 0 0 1 0 0 0 0'.split(),
+    ('levada', 'surdo_split'):  '2 0 0 0 1 0 0 0 2 0 0 0 1 0 0 0'.split(),
     ('levada', 'high_surdo'):   '0 0 0 0 X 0 X 0 0 0 0 0 X X 0 X'.split(),
     ('levada', 'repique'):      'X x / O X x / O X x / O X x / O'.split(),
     ('levada', 'caixa'):        'X X x / X x / x X x / x X x / x'.split(),
     ('levada', 'tamborim'):     'X x x x X x x x X x x x X x x x'.split(),
     ('levada', 'chocalho'):     'X x x x X x x x X x x x X x x x'.split(),
     ('levada', 'agogo'):        'L 0 0 H H 0 L 0 L 0 H 0 H 0 0 L'.split(),
-    ('virada', 'surdo_split'):  '2 0 0 0 0 1 0 0'.split(),
+    ('virada', 'surdo_split'):  '2 0 0 0 0 0 1 0'.split(),
     ('virada', 'high_surdo'):   '0 0 0 0 0 0 X 0'.split(),
     ('virada', 'repique'):      'X x / O X 0 / 0'.split(),
     ('virada', 'caixa'):        'X X x / X 0 x 0'.split(),
