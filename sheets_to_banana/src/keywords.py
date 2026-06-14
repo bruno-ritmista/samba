@@ -10,14 +10,14 @@ _NOTE_CHARS_RE = re.compile(r'^[XxOSLH/KWD0-9]+$', re.IGNORECASE)
 
 # (keyword_lower, instrument_kind) → note sequence
 _KEYWORD_TABLE: dict[tuple[str, str], list[str]] = {
-    ('levada', 'surdo_split'):  '2 0 0 1 0 0 0 2 0 0 0 1 0 0 0 0'.split(),
+    ('levada', 'surdo_split'):  '2 0 0 0 1 0 0 0 2 0 0 0 1 0 0 0'.split(),
     ('levada', 'high_surdo'):   '0 0 0 0 X 0 X 0 0 0 0 0 X X 0 X'.split(),
     ('levada', 'repique'):      'X x / O X x / O X x / O X x / O'.split(),
     ('levada', 'caixa'):        'X X x / X x / x X x / x X x / x'.split(),
     ('levada', 'tamborim'):     'X x x x X x x x X x x x X x x x'.split(),
     ('levada', 'chocalho'):     'X x x x X x x x X x x x X x x x'.split(),
     ('levada', 'agogo'):        'L 0 0 H H 0 L 0 L 0 H 0 H 0 0 L'.split(),
-    ('virada', 'surdo_split'):  '2 0 0 0 0 1 0 0'.split(),
+    ('virada', 'surdo_split'):  '2 0 0 0 0 0 1 0'.split(),
     ('virada', 'high_surdo'):   '0 0 0 0 0 0 X 0'.split(),
     ('virada', 'repique'):      'X x / O X 0 / 0'.split(),
     ('virada', 'caixa'):        'X X x / X 0 x 0'.split(),
@@ -25,6 +25,14 @@ _KEYWORD_TABLE: dict[tuple[str, str], list[str]] = {
     ('virada', 'chocalho'):     'X x x x X 0 x 0'.split(),
     ('virada', 'agogo'):        'L 0 0 H H 0 L 0'.split(),
 }
+
+# 'Corte' on Surdo 3 (high_surdo) is not a fixed pattern but a run-length
+# shorthand: each beat carrying a 'Corte' cell expands based on whether it is
+# followed by another 'Corte' beat. A 'mid' beat (followed by more corte) hits
+# once on its third step; the 'end' beat (last in the run) hits twice. This one
+# rule reproduces both the 3-beat short corte and the 7-beat long corte.
+_CORTE_MID = '0 0 X 0'.split()
+_CORTE_END = '0 X 0 X'.split()
 
 
 def _classify(name: str) -> str:
@@ -42,6 +50,18 @@ def _classify(name: str) -> str:
 
 def _is_keyword(cell: str) -> bool:
     return bool(cell) and ' ' not in cell and not _NOTE_CHARS_RE.match(cell)
+
+
+def _corte_pattern(cells: list[str], i: int, span: int) -> list[str]:
+    """Pick the corte sub-pattern for the cell at `i` (covering `span` cols).
+
+    A corte beat is 'end' when it is the last in a consecutive run of corte
+    cells (no corte cell at the next beat), otherwise 'mid'. Corte cells are
+    always one beat apart, so the next corte (if any) sits at i + span.
+    """
+    next_i = i + span
+    is_last = not (next_i < len(cells) and cells[next_i].lower() == 'corte')
+    return _CORTE_END if is_last else _CORTE_MID
 
 
 def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
@@ -67,7 +87,10 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
             span += 1
         span = min(span, 4)  # keywords always cover exactly one beat (4 sixteenth-note steps)
 
-        pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
+        if cell.lower() == 'corte' and kind == 'high_surdo':
+            pattern = _corte_pattern(cells, i, span)
+        else:
+            pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
         if pattern is None:
             logger.warning(
                 "Note '%s' for instrument '%s' is not supported by the conversion tool. It will be skipped.",
