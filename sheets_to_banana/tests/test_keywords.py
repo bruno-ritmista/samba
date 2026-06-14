@@ -45,3 +45,44 @@ def test_corte_unsupported_for_other_instruments():
     cells = ['Corte'] + [''] * 63
     result = expand_keywords('Caixa', cells)
     assert result[0:4] == ['0', '0', '0', '0']
+
+
+# ── 'Subida' on Repique (issue #14) ──────────────────────────────────────────
+#
+# `Subida` is also a run-length shorthand on the Repique row:
+#   - the last subida beat in a run        → '0 W 0 O' (climax)
+#   - the second-to-last beat in a run     → 'X 0 / /' (penultimate)
+#   - any earlier beat in the run          → 'X 0 / 0' (lead-in)
+
+
+def test_short_subida_pattern():
+    """A 2-beat subida run expands to the penultimate + last patterns."""
+    cells = (['Subida'] + [''] * 3) * 2 + [''] * 56
+    result = expand_keywords('Repique', cells)
+    assert result[0:4] == 'X 0 / /'.split()
+    assert result[4:8] == '0 W 0 O'.split()
+
+
+def test_regular_subida_pattern():
+    """A 4-beat subida run expands to lead-in, lead-in, penultimate, last."""
+    cells = (['Subida'] + [''] * 3) * 4 + [''] * 48
+    result = expand_keywords('Repique', cells)
+    assert result[0:4]   == 'X 0 / 0'.split()
+    assert result[4:8]   == 'X 0 / 0'.split()
+    assert result[8:12]  == 'X 0 / /'.split()
+    assert result[12:16] == '0 W 0 O'.split()
+
+
+def test_subida_case_insensitive():
+    """'SUBIDA', 'Subida', and 'subida' all expand identically."""
+    for keyword in ('SUBIDA', 'Subida', 'subida'):
+        cells = [keyword] + [''] * 63
+        result = expand_keywords('Repique', cells)
+        assert result[0:4] == '0 W 0 O'.split()
+
+
+def test_subida_unsupported_for_other_instruments():
+    """Subida on a non-Repique row falls back to rests (unsupported keyword)."""
+    cells = ['Subida'] + [''] * 63
+    result = expand_keywords('Caixa', cells)
+    assert result[0:4] == ['0', '0', '0', '0']
