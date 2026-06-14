@@ -198,10 +198,13 @@ def trim_empty_bars(tracks: list[MappedTrack]) -> TrimResult:
     def bar_is_empty(bar_index: int) -> bool:
         start = bar_index * 16
         end = start + 16
-        return all(
-            all(n == '0' for n in t.notes[start:end])
-            for t in tracks
-        )
+        for t in tracks:
+            if any(n != '0' for n in t.notes[start:end]):
+                return False
+            for p in t.polyrhythms:
+                if p.start < end and p.end >= start and any(n != '0' for n in p.notes):
+                    return False
+        return True
 
     lead_bars = 0
     while lead_bars < bar_count and bar_is_empty(lead_bars):
