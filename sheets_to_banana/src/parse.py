@@ -66,8 +66,11 @@ def _assign_poly_slots(cell: str) -> list[str]:
     """Map a 4-column merged cell's raw content to exactly 3 poly note slots.
 
     Whitespace at the start or end of the cell string indicates a pause (rest)
-    at the corresponding position.  Internal-only spaces mean the pause is in
-    the middle slot.
+    at the corresponding position:
+    - Leading whitespace only → pause at start, notes follow
+    - Trailing whitespace only → notes first, pause at end
+    - Both leading and trailing → note in middle with pauses on both sides
+    - Internal-only spaces → pause in the middle slot
     """
     tokens = cell.split()
     if not tokens:
@@ -89,9 +92,11 @@ def _assign_poly_slots(cell: str) -> list[str]:
             return [tokens[0], tokens[1], '0']
         return [tokens[0], '0', tokens[1]]   # pause in middle
     # len(tokens) == 1
+    if has_leading and has_trailing:
+        return ['0', tokens[0], '0']   # pause both sides -> note in middle
     if has_leading:
-        return ['0', tokens[0], '0']
-    return [tokens[0], '0', '0']
+        return ['0', '0', tokens[0]]   # pause at start -> note at end
+    return [tokens[0], '0', '0']       # note at start (trailing pause or none)
 
 
 def _extract_polygroups(note_cells: list[str], bar_group_offset: int) -> list[PolyGroup]:
@@ -112,7 +117,7 @@ def _extract_polygroups(note_cells: list[str], bar_group_offset: int) -> list[Po
         raw_cell = note_cells[i]
         cell = raw_cell.strip()   # stripped for detection checks
         if (cell
-                and ' ' in cell
+                and ' ' in raw_cell
                 and all(c in _POLY_NOTE_CHARS for c in cell if c != ' ')):
             # Require exactly 3 trailing empty cells (4-column span)
             if (i + 3 < len(note_cells)
