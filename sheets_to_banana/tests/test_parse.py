@@ -411,6 +411,57 @@ def test_68_slot_assignment_trailing_space():
     assert pg.notes == ['X', 'O', '0']
 
 
+def test_68_slot_assignment_single_token_leading_space():
+    """'      X' (6 leading spaces + single token) → pause at start → ['0', '0', 'X']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', '      X', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['0', '0', 'X']
+
+
+def test_68_slot_assignment_single_token_trailing_space():
+    """'X      ' (single token + 6 trailing spaces) → pause at end → ['X', '0', '0']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', 'X      ', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['X', '0', '0']
+
+
+def test_68_slot_assignment_single_token_both_spaces():
+    """'  X  ' (leading + trailing spaces, single token) → note in middle → ['0', 'X', '0']."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', '  X  ', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    pg = brk.polygroups['Repique'][0]
+    assert pg.notes == ['0', 'X', '0']
+
+
+def test_68_bare_single_char_not_detected():
+    """'X' (no spaces at all) is not detected as a 6/8 cell → stays as normal 4/4."""
+    import io, csv as csv_mod
+    buf = io.StringIO()
+    writer = csv_mod.writer(buf)
+    writer.writerow(['B'])
+    writer.writerow(['1 - 4'])
+    writer.writerow(['Repique', 'X', '', '', ''] + [''] * 60)
+    brk = parse_sheet(buf.getvalue())[0]
+    assert 'Repique' not in brk.polygroups or brk.polygroups['Repique'] == []
+
+
 def test_68_cell_truncated_warns_on_excess_tokens(caplog):
     """More than 3 tokens in a 6/8 cell emits a warning and keeps first 3."""
     import logging
@@ -569,3 +620,43 @@ def test_long_corte_full_pattern():
 
     url = encode_url(tracks)
     assert '.7cuZDqjc' in url   # the High Surdo track segment
+
+
+# ── 'Subida' keyword on Repique (issue #14) end-to-end ───────────────────────
+
+def test_short_subida_full_pattern():
+    """Short subida: Repique with Subida on bar1 beats 1-2 → climax pattern."""
+    from sheets_to_banana.mapping import map_break
+
+    notes = (['Subida'] + [''] * 3) * 2 + [''] * 56
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    repique = [t for t in tracks if t.instrument_id == '3']
+    assert len(repique) == 1
+    # beat 1 'X 0 / /' -> 1 0 3 3, beat 2 '0 W 0 O' -> 0 5 0 6
+    expected = '1 0 3 3 0 5 0 6'.split() + ['0'] * 8
+    assert repique[0].notes == expected
+
+
+def test_regular_subida_full_pattern():
+    """Regular subida: Repique with Subida on all 4 beats of bar1."""
+    from sheets_to_banana.mapping import map_break
+
+    notes = (['Subida'] + [''] * 3) * 4 + [''] * 48
+    csv_text = make_csv(
+        break_header('B'),
+        section_label(),
+        instrument_row('Repique', notes),
+    )
+    brk = parse_sheet(csv_text)[0]
+    tracks = map_break(brk)
+    repique = [t for t in tracks if t.instrument_id == '3']
+    assert len(repique) == 1
+    # beats 1-2 'X 0 / 0' -> 1 0 3 0, beat 3 'X 0 / /' -> 1 0 3 3, beat 4 '0 W 0 O' -> 0 5 0 6
+    expected = '1 0 3 0 1 0 3 0 1 0 3 3 0 5 0 6'.split()
+    assert repique[0].notes == expected

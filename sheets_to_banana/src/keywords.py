@@ -34,6 +34,14 @@ _KEYWORD_TABLE: dict[tuple[str, str], list[str]] = {
 _CORTE_MID = '0 0 X 0'.split()
 _CORTE_END = '0 X 0 X'.split()
 
+# 'Subida' on Repique is also a run-length shorthand: a build-up climax of
+# '/ /' followed by 'W' then 'O' on its last two beats, with any earlier
+# beats in the run filled with a lead-in 'X 0 / 0'. This one rule reproduces
+# both the 2-beat short subida and the 4-beat regular subida.
+_SUBIDA_LEAD = 'X 0 / 0'.split()
+_SUBIDA_PENULTIMATE = 'X 0 / /'.split()
+_SUBIDA_LAST = '0 W 0 O'.split()
+
 
 def _classify(name: str) -> str:
     """Map a raw instrument name to its canonical kind for table lookup."""
@@ -64,6 +72,23 @@ def _corte_pattern(cells: list[str], i: int, span: int) -> list[str]:
     return _CORTE_END if is_last else _CORTE_MID
 
 
+def _subida_pattern(cells: list[str], i: int, span: int) -> list[str]:
+    """Pick the subida sub-pattern for the cell at `i` (covering `span` cols).
+
+    Based on how many more 'subida' cells follow (forward look-ahead only,
+    like _corte_pattern): the last cell in a run -> LAST, the second-to-last
+    -> PENULTIMATE, any earlier cell -> LEAD. Subida cells are always one
+    beat apart, so the next subida (if any) sits at i + span.
+    """
+    next_i = i + span
+    has_next = next_i < len(cells) and cells[next_i].lower() == 'subida'
+    if not has_next:
+        return _SUBIDA_LAST
+    next_next_i = next_i + span
+    has_next_next = next_next_i < len(cells) and cells[next_next_i].lower() == 'subida'
+    return _SUBIDA_PENULTIMATE if not has_next_next else _SUBIDA_LEAD
+
+
 def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
     """Replace keyword cells with their predefined note sequences.
 
@@ -89,6 +114,8 @@ def expand_keywords(instrument: str, cells: list[str]) -> list[str]:
 
         if cell.lower() == 'corte' and kind == 'high_surdo':
             pattern = _corte_pattern(cells, i, span)
+        elif cell.lower() == 'subida' and kind == 'repique':
+            pattern = _subida_pattern(cells, i, span)
         else:
             pattern = _KEYWORD_TABLE.get((cell.lower(), kind))
         if pattern is None:
