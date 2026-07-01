@@ -10,6 +10,25 @@
 - **Tech-savvy:** `python -m banana_to_pdf <bananadrum_url> [-o out.pdf]`
 - **Non-tech:** a Google Colab notebook that takes the URL and offers the PDF for download.
 
+## Increment plan & status
+
+Increments mirror the pipeline stages (confirmed with user 2026-07-01, one increment per stage, same pattern as `sheets_to_banana/doc/PLAN.md`).
+
+| # | Increment | Scope | Status |
+|---|---|---|---|
+| 1 | Repo setup + `decode.py` | Worktree/branch (`banana_to_pdf` at `C:/Users/bruno/git/samba/banana-to-pdf`), README row, `decode_url()` + `RawTrack`/`DecodedArrangement`, `test_decode.py` (round-trip vs. `sheets_to_banana`'s verified anchor URLs + real-world BananaDrum URLs) | **Done** |
+| 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | Not started |
+| 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | Not started |
+| 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | Not started |
+| 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | Not started |
+
+**Increment 1 implementation notes (for continuing in another session):**
+- `src/decode.py` — `decode_url()`, `_decode_url_number()`, `_decode_notes()`, dataclasses `RawTrack`/`DecodedArrangement`. `_B64` and `_INSTRUMENT_BASE` defined locally (not imported from `sheets_to_banana`, per "Reuse / reference" below).
+- `tests/test_decode.py` — 11 tests passing, including the two anchors from `sheets_to_banana/tests/test_encode.py` (`test_low_surdo_beat_2_and_4`, `test_encode_url_with_polyrhythm_verified`) decoded in reverse.
+- Manually smoke-tested against two real bananadrum.net URLs (20-bar and 15-bar breaks with mixed polyrhythm/non-polyrhythm tracks) — title/tempo/n_bars parsed correctly, non-polyrhythm tracks padded to the right length, polyrhythm tracks correctly detected and skipped with a warning.
+- `pyproject.toml` created for `pip install -e .` (needed for `banana_to_pdf.*` imports to resolve in tests); `requirements.txt` / `doc/requirements-dev.txt` deferred to Increment 4 since no new dependency is needed until `render.py` (fpdf2).
+- Next step for Increment 2: read `INSTRUMENTS`/`GLYPHS` design already spec'd under "New tool structure" → `src/mapping.py` below; no new open decisions expected, should be a straight implementation.
+
 ## Decisions locked with the user
 
 | Topic | Decision |
