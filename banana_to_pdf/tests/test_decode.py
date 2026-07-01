@@ -79,17 +79,36 @@ def test_multiple_tracks_order_preserved():
     assert [t.instrument_id for t in arrangement.tracks] == ['9', '8', '5']
 
 
-def test_polyrhythm_track_skipped_with_warning(caplog):
-    """Inverse of test_encode_url_with_polyrhythm_verified in sheets_to_banana."""
+def test_polyrhythm_only_covered_steps_skipped(caplog):
+    """Inverse of test_encode_url_with_polyrhythm_verified in sheets_to_banana.
+
+    Only the polyrhythm-covered steps (beat 1: index 0-3) come back as None;
+    the rest of the Repinique track still decodes normally.
+    """
     url = ('https://bananadrum.net/?a2='
            '4-4.110.1.1-4.16.00.10.20.310000000-3nq.50.60.70.80.90')
     with caplog.at_level(logging.WARNING):
         arrangement = decode_url(url)
 
     ids = [t.instrument_id for t in arrangement.tracks]
-    assert '3' not in ids
-    assert ids == ['0', '1', '2', '5', '6', '7', '8', '9']
+    assert ids == ['0', '1', '2', '3', '5', '6', '7', '8', '9']
+
+    repinique = next(t for t in arrangement.tracks if t.instrument_id == '3')
+    assert repinique.styles == [None, None, None, None] + ['0'] * 12
+    assert "Instrument 'Repinique'" in caplog.text
     assert 'polyrhythm' in caplog.text.lower()
+
+
+def test_polyrhythm_leading_zero_start_decodes(caplog):
+    """A polyrhythm group starting at step 0 exercises the leading-zero-loss fix."""
+    url = ('https://bananadrum.net/?a2='
+           '4-4.110.1.1-4.16.00.10-3nq.2qmIZ-3nq.30.50.60.70.80.90')
+    with caplog.at_level(logging.WARNING):
+        arrangement = decode_url(url)
+
+    chocalho = next(t for t in arrangement.tracks if t.instrument_id == '1')
+    assert chocalho.styles[:4] == [None, None, None, None]
+    assert chocalho.styles[4:] == ['0'] * 12
 
 
 def test_n_bars_two_pads_to_32_steps():

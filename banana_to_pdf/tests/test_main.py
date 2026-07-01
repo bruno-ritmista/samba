@@ -1,5 +1,6 @@
 """Tests for __main__.py — Increment 4."""
 
+import re
 import sys
 
 from banana_to_pdf.__main__ import _default_output_path, main
@@ -10,7 +11,7 @@ def test_default_output_path_from_title():
 
 
 def test_default_output_path_falls_back_when_title_empty():
-    assert _default_output_path('') == 'arrangement.pdf'
+    assert re.fullmatch(r'Bananadrum_\d{8}_\d{6}\.pdf', _default_output_path(''))
 
 
 def test_main_end_to_end_writes_pdf(tmp_path, monkeypatch, capsys):

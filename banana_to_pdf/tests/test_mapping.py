@@ -48,6 +48,13 @@ def test_display_order_matches_webgui():
     assert [r.label for r in rows] == ['Tamborim', 'Caixa', 'High Surdo']
 
 
+def test_polyrhythm_skipped_steps_render_blank():
+    styles = [None, None, None, None] + ['1'] + ['0'] * 11
+    rows = map_tracks(_arrangement([RawTrack('1', styles)]))  # Chocalho
+    assert rows[0].cells[:4] == ['', '', '', '']
+    assert rows[0].cells[4] == 'X'
+
+
 def test_unmapped_style_falls_back_and_warns(caplog):
     # Repinique (base 8) has no glyph for style index 7 → falls to fallback
     styles = ['0'] * 15 + ['7']

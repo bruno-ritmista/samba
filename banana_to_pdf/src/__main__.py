@@ -8,6 +8,7 @@ import argparse
 import logging
 import re
 import sys
+from datetime import datetime
 
 from banana_to_pdf.decode import decode_url
 from banana_to_pdf.mapping import map_tracks
@@ -17,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 def _default_output_path(title: str) -> str:
-    slug = re.sub(r'[^\w\-]+', '_', title).strip('_')
-    return f'{slug}.pdf' if slug else 'arrangement.pdf'
+    slug = re.sub(r'[^\w\-]+', '_', title).strip('_') if title else ''
+    if slug:
+        return f'{slug}.pdf'
+    return f'Bananadrum_{datetime.now():%Y%m%d_%H%M%S}.pdf'
 
 
 def main() -> None:

@@ -77,7 +77,7 @@ def _glyph(instrument_id: str, style_index: int) -> str:
 
 def _row_for_track(track: RawTrack) -> Row:
     label = INSTRUMENTS[track.instrument_id][0]
-    cells = [_glyph(track.instrument_id, int(s)) for s in track.styles]
+    cells = ['' if s is None else _glyph(track.instrument_id, int(s)) for s in track.styles]
     return Row(label, cells)
 
 

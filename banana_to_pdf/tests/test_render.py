@@ -25,3 +25,8 @@ def test_small_arrangement_fits_one_page():
 def test_large_arrangement_paginates():
     pdf = _build_pdf(_rows(200, n_rows=5), n_bars=200, title='Long Break', url='https://bananadrum.net/?a2=x')
     assert len(pdf.pages) >= 2
+
+
+def test_no_title_renders_without_error():
+    pdf = _build_pdf(_rows(4), n_bars=4, title='', url='https://bananadrum.net/?a2=x')
+    assert len(pdf.pages) == 1
