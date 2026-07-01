@@ -33,14 +33,14 @@ INSTRUMENTS: dict[str, tuple[str, int, list[str]]] = {
 # instruments (X=strong/center accent, x=light/edge/ghost, etc.) rather
 # than giving each instrument its own bespoke set — mirrored here.
 GLYPHS: dict[tuple[str, int], str] = {
-    ('a', 1): '↓', ('a', 2): 'v', ('a', 3): '^', ('a', 4): '↑',  # low-low..high-high
-    ('0', 1): 'v', ('0', 2): '^',  # reuse 4-Bell's 'low'/'high'
+    ('a', 1): '↓', ('a', 2): 'v', ('a', 3): 'ʌ', ('a', 4): '↑',  # low-low..high-high
+    ('0', 1): 'v', ('0', 2): 'ʌ',  # reuse 4-Bell's 'low'/'high'
     ('1', 1): 'X', ('1', 2): 'x',
     ('2', 1): 'X', ('2', 2): 'x',
     ('4', 1): 'X', ('4', 2): 'x',
-    ('3', 1): 'X', ('3', 2): 'x', ('3', 3): '⁂', ('3', 4): '◠', ('3', 5): '/', ('3', 6): '○', ('3', 7): '✱',
-    ('5', 1): 'X', ('5', 2): 'x', ('5', 3): '/', ('5', 4): '⁂',  # buzz, rimshot (shared w/ Repinique)
-    ('6', 1): '○', ('6', 2): '✱', ('6', 3): '●',  # open, slap (shared w/ Repinique), bass
+    ('3', 1): 'X', ('3', 2): 'x', ('3', 3): '⁂', ('3', 4): 'ر', ('3', 5): 'ᚍ', ('3', 6): '○', ('3', 7): '❊',
+    ('5', 1): 'X', ('5', 2): 'x', ('5', 3): 'ᚍ', ('5', 4): '⁂',  # buzz, rimshot (shared w/ Repinique)
+    ('6', 1): '○', ('6', 2): '❊', ('6', 3): '●',  # open, slap (shared w/ Repinique), bass
     ('7', 1): '○', ('7', 2): '●',  # accent = open ring, muted = filled (matches BananaDrum icon)
     ('8', 1): '○', ('8', 2): '●',
     ('9', 1): '○', ('9', 2): '●',

@@ -211,4 +211,4 @@ Copy the `sheets_to_banana.ipynb` pattern: one form-mode cell with `#@param` inp
 ## Open points (future iterations)
 
 - Polyrhythm (6/8) decoding & rendering — currently detected-and-skipped with a warning.
-- Glyph table aesthetics — several glyphs (`⁂` rimshot, `◠` rim, `/` buzz) were read off a screenshot at low confidence; tune against a printed A4 page. The `/` buzz glyph in particular may need to become a multi-character `///` to match the WebGUI's triple-slash icon once cell width allows it.
+- Glyph `⁂` does not closely resemble Web GUI.
