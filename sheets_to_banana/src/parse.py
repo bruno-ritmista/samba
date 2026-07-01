@@ -66,8 +66,11 @@ def _assign_poly_slots(cell: str) -> list[str]:
     """Map a 4-column merged cell's raw content to exactly 3 poly note slots.
 
     Whitespace at the start or end of the cell string indicates a pause (rest)
-    at the corresponding position.  Internal-only spaces mean the pause is in
-    the middle slot.
+    at the corresponding position:
+    - Leading whitespace only → pause at start, notes follow
+    - Trailing whitespace only → notes first, pause at end
+    - Both leading and trailing → note in middle with pauses on both sides
+    - Internal-only spaces → pause in the middle slot
     """
     tokens = cell.split()
     if not tokens:
@@ -89,9 +92,11 @@ def _assign_poly_slots(cell: str) -> list[str]:
             return [tokens[0], tokens[1], '0']
         return [tokens[0], '0', tokens[1]]   # pause in middle
     # len(tokens) == 1
+    if has_leading and has_trailing:
+        return ['0', tokens[0], '0']   # pause both sides -> note in middle
     if has_leading:
-        return ['0', tokens[0], '0']
-    return [tokens[0], '0', '0']
+        return ['0', '0', tokens[0]]   # pause at start -> note at end
+    return [tokens[0], '0', '0']       # note at start (trailing pause or none)
 
 
 def _extract_polygroups(note_cells: list[str], bar_group_offset: int) -> list[PolyGroup]:
@@ -112,7 +117,7 @@ def _extract_polygroups(note_cells: list[str], bar_group_offset: int) -> list[Po
         raw_cell = note_cells[i]
         cell = raw_cell.strip()   # stripped for detection checks
         if (cell
-                and ' ' in cell
+                and ' ' in raw_cell
                 and all(c in _POLY_NOTE_CHARS for c in cell if c != ' ')):
             # Require exactly 3 trailing empty cells (4-column span)
             if (i + 3 < len(note_cells)
@@ -140,16 +145,29 @@ def _normalize_note(cell: str) -> str:
 
 
 def _finalize_break(brk: Break) -> None:
-    """Pad all tracks in a break to the same length with rests.
+    """Pad all tracks to the same length, then trim trailing all-rest bars.
 
     Instruments that appear in only some bar groups end up shorter than
-    others. This pads them so every track in the break has equal length.
+    others. This pads them so every track in the break has equal length,
+    then trims trailing bars that are entirely rests across all tracks.
     """
     if not brk.tracks:
         return
     max_len = max(len(v) for v in brk.tracks.values())
     for notes in brk.tracks.values():
         notes.extend(['0'] * (max_len - len(notes)))
+
+    # Find the last step with a non-rest note across all tracks
+    last_active = -1
+    for notes in brk.tracks.values():
+        for i in range(len(notes) - 1, -1, -1):
+            if notes[i] != '0':
+                last_active = max(last_active, i)
+                break
+    if last_active >= 0:
+        trimmed_len = ((last_active // 16) + 1) * 16
+        for notes in brk.tracks.values():
+            del notes[trimmed_len:]
 
 
 def parse_song_title(csv_text: str) -> str:
