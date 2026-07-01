@@ -1,7 +1,7 @@
 # Implementation Plan — Notebook installs from its own branch (issue #9)
 
-Status: **approved, not yet implemented.** This document is a self-contained handover
-for a fresh session. Read it top-to-bottom, then apply "The change" section.
+Status: **implemented.** See "Status update" near the end for what was done, two bugs found
+along the way (one fixed, one still open), and follow-ups.
 
 ## Problem (issue #9)
 
@@ -154,6 +154,42 @@ print("edited OK")
 - No second/dev notebook, no generation of one notebook from another.
 - No runtime branch auto-detection (`eval_js`/`document.location.href`).
 - README needs no change: it links the `main` notebook, whose behavior is unchanged.
+
+## Status update
+
+- **Done**: Edit 1 (`install_branch` param) and Edit 2
+  (`_branch = install_branch.strip() or "main"`) applied to the `generate` cell as specified
+  above.
+- **New finding #1 (found and fixed)**: Colab's `#@param` options parser bare-quotes any
+  `word:` pattern via a naive regex that doesn't respect string boundaries. The original
+  placeholder text `"Advanced: leave empty to install from main"` has a colon *inside* the
+  string, which corrupted the options JSON and broke the field's type detection. Symptom: Colab
+  showed the error `Fehler beim Parsen des ungültigen JSON-Formats`, and once the field failed to
+  parse as `type:"string"`, running the cell substituted the typed value into the source
+  **unquoted** (`install_branch = bugfix/... #@param ...`), raising `NameError`. Fixed by
+  rewording the placeholder to `"Advanced - leave empty to install from main"`. **Lesson for
+  future edits to this cell: never put a colon inside a `#@param` option string value** — none
+  of the other three params' placeholders have one, which is why only this field broke.
+- **New finding #2 (found and fixed)**: the install block was gated by
+  `if importlib.util.find_spec("sheets_to_banana") is None:` — "only install if not present at
+  all." This has no memory of *which branch* is installed: once any branch is installed, every
+  later auto-rerun (the form uses `run:"auto"`, which reruns on every field edit) finds the
+  package present and skips the whole block, so changing `install_branch` after the first run
+  silently did nothing. Fixed by tracking the last-installed branch in a module-level variable
+  (`_installed_branch`, a bare assignment at the cell's top level — persists across auto-reruns
+  within the same Colab runtime, and disappears exactly when the installed package would too,
+  e.g. on a runtime restart) and reinstalling when the package is missing *or* the requested
+  branch differs from the tracked one. Also added `--reinstall-package sheets_to_banana` to the
+  `uv pip install` call, scoped to just that one package, as a guarantee that the git-ref switch
+  actually replaces the installed code regardless of `uv`'s own "already satisfied" heuristics
+  for VCS URLs.
+- **Open (known limitation, not planned)**: if a developer keeps `install_branch` set to the
+  same branch name and pushes new commits to it, this fix does not pick up the new commits — the
+  branch *name* didn't change, so the guard still skips the reinstall. A correct fix needs either
+  always-reinstalling while a branch is set (costly: every unrelated field edit, e.g. tweaking
+  `tempo`, would pay a ~30s reinstall) or a GitHub API commit-SHA check (adds a network
+  dependency). Not building either — not reported, and the existing workaround (retype/toggle the
+  `install_branch` field to force a value change) is enough.
 
 ## Closing the issue
 
