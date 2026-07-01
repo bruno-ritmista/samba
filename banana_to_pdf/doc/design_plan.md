@@ -20,7 +20,7 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 | 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | **Done** |
 | 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | **Done** |
 | 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | **Done** |
-| 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | Not started |
+| 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | **Done** |
 
 **Increment 1 implementation notes (for continuing in another session):**
 - `src/decode.py` — `decode_url()`, `_decode_url_number()`, `_decode_notes()`, dataclasses `RawTrack`/`DecodedArrangement`. `_B64` and `_INSTRUMENT_BASE` defined locally (not imported from `sheets_to_banana`, per "Reuse / reference" below).
@@ -61,6 +61,13 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 - `tests/test_main.py` — 3 tests: default-filename derivation (with and without title), one end-to-end smoke test reusing `test_decode.py`'s verified anchor URL, asserting a real PDF gets written and its path printed.
 - Full suite: 22/22 passing (`pytest tests/ -v`).
 - Next step for Increment 5: `deployment/banana_to_pdf.ipynb` per the plan below — copy `sheets_to_banana.ipynb`'s pattern, `uv pip install ... git+...#subdirectory=banana_to_pdf`, call `decode_url`/`map_tracks`/`render_pdf` directly, `google.colab.files.download(path)`.
+
+**Increment 5 implementation notes:**
+- `deployment/banana_to_pdf.ipynb` — one markdown cell + one form-mode code cell, mirroring `sheets_to_banana.ipynb`'s structure (branch-aware `uv pip install`, keepalive thread, friendly ⚠️-prefixed warning logging, ✅/❌ messages). Simpler than the sheets version: single `bananadrum_url` param (no break-selection/tempo fields, since those aren't inputs to this pipeline) plus the same advanced `branch_name` field.
+- Reuses `_default_output_path` from `__main__.py` (imported, not duplicated) for the download filename.
+- Pipeline cell: `decode_url` → `map_tracks` → `render_pdf` → `google.colab.files.download(out_path)`; `decode_url` failure and empty-`rows` are both caught and reported with a friendly ❌, matching `__main__.py`'s error handling.
+- Verified the exact pipeline calls used in the notebook cell (not the notebook itself, which needs Colab) against a real decode: rendered a non-empty PDF from the anchor URL in `test_decode.py`.
+- All 5 increments now complete per the plan.
 
 ## Decisions locked with the user
 
