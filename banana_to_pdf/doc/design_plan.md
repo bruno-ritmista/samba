@@ -18,7 +18,7 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 |---|---|---|---|
 | 1 | Repo setup + `decode.py` | Worktree/branch (`banana_to_pdf` at `C:/Users/bruno/git/samba/banana-to-pdf`), README row, `decode_url()` + `RawTrack`/`DecodedArrangement`, `test_decode.py` (round-trip vs. `sheets_to_banana`'s verified anchor URLs + real-world BananaDrum URLs) | **Done** |
 | 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | **Done** |
-| 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | Not started |
+| 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | **Done** |
 | 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | Not started |
 | 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | Not started |
 
@@ -37,16 +37,33 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 - `tests/test_mapping.py` — 5 tests passing (glyph lookup, surdo merge incl. both-hit, empty-row drop, display order, fallback+warn).
 - Next step for Increment 3: `src/render.py` per the fpdf2 spec below; no new open decisions expected.
 
+**Increment 3 implementation notes (for continuing in another session):**
+- `assets/DejaVuSans.ttf` bundled by copying it out of a transiently-installed `matplotlib` wheel (matplotlib itself was uninstalled right after; it is not a project dependency). Reuses an already-published, permissively-licensed font instead of hand-fetching a URL.
+- One glyph changed from Increment 2's draft: Repinique "hand" (`('3', 6)`) was `'✋'` (U+270B), which DejaVu Sans does **not** cover (confirmed via `fontTools` cmap check) — swapped to `'✱'` (U+2731, heavy asterisk), which it does cover. Every other glyph in `GLYPHS` was checked against the bundled font's cmap and is covered.
+- `src/render.py` — `render_pdf(rows, n_bars, title, url, out_path)` plus a testable `_build_pdf(...) -> FPDF` seam (returns before `.output()`, so tests can assert `len(pdf.pages)` without parsing a written file or adding a PDF-reading dependency).
+- Systems are drawn whole-or-on-a-new-page (`pdf.set_auto_page_break(False)`, manual space check before each system) so a system never splits across a page break, matching the plan's "paginate between systems" intent rather than fpdf2's default per-cell auto page break.
+- Cell width is derived (`(page_width - margins - label_width) / 64`), not hardcoded to the plan's ~2.6mm starting guess — `_LABEL_WIDTH_MM` (34mm, sized for "Repinique (Whippy)") is the tunable knob instead.
+- `tests/test_render.py` — 3 tests: non-empty file written, small arrangement fits one page, a 200-bar arrangement forces ≥2 pages.
+- `fpdf2` was `pip install`ed into the dev environment for this increment but **not yet** added to `requirements.txt` — that formalization is Increment 4 per the plan, along with wiring `assets/DejaVuSans.ttf` into package data (it currently resolves via a path relative to `src/`, which works for editable installs but needs an explicit package-data entry once this is a real wheel/sdist install, e.g. via Colab).
+- Next step for Increment 4: `src/__main__.py` CLI + `requirements.txt` (`fpdf2>=2.7`) + `doc/requirements-dev.txt` (`pytest>=8.0.0`) + package-data wiring for the font, per the plan below.
+
+**Post-Increment-3 revision (2026-07-01, user reviewed a real render against a WebGUI screenshot):**
+- **Glyph table replaced.** The real GUI reuses one shared glyph vocabulary across instruments for equivalent hit *kinds*, rather than a bespoke set per instrument: `X`=strong/center accent, `x`=light/edge/ghost, `○`=open, `●`=filled/muted/bass, `⁂`=rimshot, `/`=buzz, `✱`=slap, `↓ v ^ ↑`=Agogô low-low/low/high/high-high (2-bell Agogô reuses 4-Bell's middle two, `v`/`^`). Repinique's "rim" (`◠`) is the one style with no cross-instrument match. Read off the screenshot at low confidence on a few cells — flagged as still tunable, same as before.
+- **Surdos un-merged.** High/Mid/Low Surdo (`'7'`/`'8'`/`'9'`) are now three separate rows (matching the WebGUI), not merged into one "Surdo 1a/2a" row — a both-hit combined glyph made Low vs Mid indistinguishable, which defeated the point of printing them. `_merge_surdo` and `_SURDO_BOTH_GLYPH` removed from `mapping.py`.
+- **Display order now matches the WebGUI exactly**, top to bottom: Agogô, 4-Bell Agogô, Chocalho, Tamborim, Repinique, Repinique (Whippy), Caixa, Timbau, High Surdo, Mid Surdo, Low Surdo — replacing the earlier "Surdos first" guess.
+- `tests/test_mapping.py` updated to match (glyph assertions, no-merge assertion, new order assertion).
+
 ## Decisions locked with the user
 
 | Topic | Decision |
 |---|---|
-| Note glyphs | **Unicode symbols** (not ASCII, not embedded icon images) that resemble BananaDrum icons. |
-| Glyph table | I provide a sensible default dict; user tunes after seeing a real PDF. |
+| Note glyphs | **Unicode symbols** (not ASCII, not embedded icon images) that resemble BananaDrum icons, reusing one glyph per hit-kind across instruments (see revision note above). |
+| Glyph table | I provide a sensible default dict; user tunes after seeing a real PDF. Revised once already against a WebGUI screenshot (2026-07-01); still tunable. |
 | Polyrhythm (6/8) | **Out of scope for iteration 1.** Detect a `-<suffix>` on a track segment, warn, skip that track. Open point for future. |
 | Layout | **4 bars per "system"** (64 step-cells wide), systems stacked down the page; ~9 systems ≈ 36 bars for a typical (few-instrument) break. |
 | Overflow | **Paginate automatically** — spill onto page 2, 3… based on available vertical space. |
-| Surdos | Merge Low (`'8'`... actually id `'9'`) + Mid (id `'8'`) tracks back into **one "Surdo 1a/2a" row**. High Surdo (`'7'`) stays its own row. |
+| Instrument order | Matches the WebGUI top-to-bottom order exactly (see revision note above). |
+| Surdos | **Not merged** — High/Mid/Low Surdo stay three separate rows, matching the WebGUI (reversed from the original "merge Low+Mid" decision once a combined glyph proved to hide which drum was hit). |
 | Empty instruments | Omitted from the PDF (all-rest tracks skipped). |
 | Unknown styles | Skip (fallback to rest/blank) + warn; never crash. Open point for future. |
 | PDF library | **fpdf2** (pure-Python, tiny, Colab-friendly, native table + hyperlink + Unicode-font support). |
@@ -173,10 +190,9 @@ Copy the `sheets_to_banana.ipynb` pattern: one form-mode cell with `#@param` inp
 1. **Round-trip (strongest):** take a known URL from `sheets_to_banana/tests/test_e2e.py` (or generate one via `encode_url`), run `decode_url`, and assert instrument ids + per-step style indices match the original `MappedTrack`s. This proves decode ⟂ encode.
 2. **Unit:** `test_decode.py` — base-64 decode of small known integers; leading-zero padding to `n_bars*16`; `t=` present/absent; polyrhythm-suffix track is skipped with a warning (`caplog`).
 3. **Render smoke:** `test_render.py` — render a small 2-instrument, 4-bar arrangement; assert the output `.pdf` exists, is non-empty, and (via fpdf2) has the expected page count; a >36-bar input yields ≥2 pages.
-4. **Manual end-to-end:** build a rhythm at bananadrum.net, copy its share URL, run `python -m banana_to_pdf "<url>" -o out.pdf`, open `out.pdf`, confirm: correct instruments (empties omitted), surdos merged into one row, glyphs legible, title hyperlink opens the URL, 4-bar systems paginate.
+4. **Manual end-to-end:** build a rhythm at bananadrum.net, copy its share URL, run `python -m banana_to_pdf "<url>" -o out.pdf`, open `out.pdf`, confirm: correct instruments (empties omitted), Surdos as three separate rows in WebGUI order, glyphs legible, title hyperlink opens the URL, 4-bar systems paginate.
 
 ## Open points (future iterations)
 
 - Polyrhythm (6/8) decoding & rendering — currently detected-and-skipped with a warning.
-- Glyphs for hit styles with no clean single symbol, and muted-surdo damped glyph — currently fallback/skip; refine after a real print proof.
-- Glyph table aesthetics — tune against a printed A4 page.
+- Glyph table aesthetics — several glyphs (`⁂` rimshot, `◠` rim, `/` buzz) were read off a screenshot at low confidence; tune against a printed A4 page. The `/` buzz glyph in particular may need to become a multi-character `///` to match the WebGUI's triple-slash icon once cell width allows it.

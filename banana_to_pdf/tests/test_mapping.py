@@ -20,19 +20,19 @@ def test_simple_track_mapped_to_glyphs():
 
     assert len(rows) == 1
     assert rows[0].label == 'Caixa'
-    assert rows[0].cells[0] == '●'
-    assert rows[0].cells[4] == '○'
+    assert rows[0].cells[0] == 'X'
+    assert rows[0].cells[4] == 'x'
     assert rows[0].cells[1] == ''
 
 
-def test_surdo_low_and_mid_merged_into_one_row():
+def test_surdos_stay_as_separate_rows():
     low = RawTrack('9', ['0', '1', '0', '1'])
     mid = RawTrack('8', ['0', '0', '1', '1'])
     rows = map_tracks(_arrangement([low, mid]))
 
-    assert len(rows) == 1
-    assert rows[0].label == 'Surdo 1a/2a'
-    assert rows[0].cells == ['', '○', '○', '◉']  # low-only, mid-only, both (accent = open ring)
+    assert [r.label for r in rows] == ['Mid Surdo', 'Low Surdo']
+    assert rows[0].cells == ['', '', '○', '○']
+    assert rows[1].cells == ['', '○', '', '○']
 
 
 def test_all_rest_row_dropped():
@@ -40,11 +40,12 @@ def test_all_rest_row_dropped():
     assert rows == []
 
 
-def test_display_order_surdo_before_caixa():
+def test_display_order_matches_webgui():
     high_surdo = RawTrack('7', ['1'] + ['0'] * 15)
     caixa = RawTrack('5', ['1'] + ['0'] * 15)
-    rows = map_tracks(_arrangement([caixa, high_surdo]))
-    assert [r.label for r in rows] == ['High Surdo', 'Caixa']
+    tamborim = RawTrack('2', ['1'] + ['0'] * 15)
+    rows = map_tracks(_arrangement([high_surdo, caixa, tamborim]))
+    assert [r.label for r in rows] == ['Tamborim', 'Caixa', 'High Surdo']
 
 
 def test_unmapped_style_falls_back_and_warns(caplog):

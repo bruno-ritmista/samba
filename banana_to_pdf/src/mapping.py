@@ -27,25 +27,28 @@ INSTRUMENTS: dict[str, tuple[str, int, list[str]]] = {
     '9': ('Low Surdo', 3, ['accent', 'muted']),
 }
 
-# (instrument_id, style_index) -> Unicode glyph.  # tunable, see doc/design_plan.md
+# (instrument_id, style_index) -> Unicode glyph, read off a real BananaDrum
+# WebGUI screenshot 2026-07-01 (still tunable, see doc/design_plan.md).
+# The real GUI reuses the same glyph for the same *kind* of hit across
+# instruments (X=strong/center accent, x=light/edge/ghost, etc.) rather
+# than giving each instrument its own bespoke set — mirrored here.
 GLYPHS: dict[tuple[str, int], str] = {
-    ('0', 1): '▽', ('0', 2): '△',
-    ('a', 1): '▼', ('a', 2): '▽', ('a', 3): '△', ('a', 4): '▲',
-    ('1', 1): '●', ('1', 2): '○',
-    ('2', 1): '●', ('2', 2): '○',
-    ('4', 1): '●', ('4', 2): '○',
-    ('3', 1): '●', ('3', 2): '◐', ('3', 3): '╱', ('3', 4): '▏', ('3', 5): '~', ('3', 6): '✋', ('3', 7): '◆',
-    ('5', 1): '●', ('5', 2): '○', ('5', 3): '~', ('5', 4): '╱',
-    ('6', 1): '◯', ('6', 2): '◆', ('6', 3): '●',
+    ('a', 1): '↓', ('a', 2): 'v', ('a', 3): '^', ('a', 4): '↑',  # low-low..high-high
+    ('0', 1): 'v', ('0', 2): '^',  # reuse 4-Bell's 'low'/'high'
+    ('1', 1): 'X', ('1', 2): 'x',
+    ('2', 1): 'X', ('2', 2): 'x',
+    ('4', 1): 'X', ('4', 2): 'x',
+    ('3', 1): 'X', ('3', 2): 'x', ('3', 3): '⁂', ('3', 4): '◠', ('3', 5): '/', ('3', 6): '○', ('3', 7): '✱',
+    ('5', 1): 'X', ('5', 2): 'x', ('5', 3): '/', ('5', 4): '⁂',  # buzz, rimshot (shared w/ Repinique)
+    ('6', 1): '○', ('6', 2): '✱', ('6', 3): '●',  # open, slap (shared w/ Repinique), bass
     ('7', 1): '○', ('7', 2): '●',  # accent = open ring, muted = filled (matches BananaDrum icon)
     ('8', 1): '○', ('8', 2): '●',
     ('9', 1): '○', ('9', 2): '●',
 }
 _FALLBACK_GLYPH = '●'
-_SURDO_BOTH_GLYPH = '◉'  # tunable: Low+Mid hit on the same step
 
-# Surdos, Caixa, Repinique(+Whippy), Timbau, Tamborim, Chocalho, Agogô(+4-Bell)
-_DISPLAY_ORDER = ['7', 'surdo_merged', '5', '3', '4', '6', '2', '1', '0', 'a']
+# BananaDrum WebGUI top-to-bottom order.
+_DISPLAY_ORDER = ['0', 'a', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 _warned: set[tuple[str, int]] = set()
 
@@ -78,43 +81,16 @@ def _row_for_track(track: RawTrack) -> Row:
     return Row(label, cells)
 
 
-def _merge_surdo(low: RawTrack | None, mid: RawTrack | None) -> Row:
-    low_styles = low.styles if low else []
-    mid_styles = mid.styles if mid else []
-    n_steps = len(low_styles) or len(mid_styles)
-    low_styles = low_styles or ['0'] * n_steps
-    mid_styles = mid_styles or ['0'] * n_steps
-
-    cells: list[str] = []
-    for low_s, mid_s in zip(low_styles, mid_styles):
-        low_i, mid_i = int(low_s), int(mid_s)
-        if low_i and mid_i:
-            cells.append(_SURDO_BOTH_GLYPH)
-        elif low_i:
-            cells.append(_glyph('9', low_i))
-        elif mid_i:
-            cells.append(_glyph('8', mid_i))
-        else:
-            cells.append('')
-    return Row('Surdo 1a/2a', cells)
-
-
 def map_tracks(decoded: DecodedArrangement) -> list[Row]:
     """Translate a DecodedArrangement into printable Rows.
 
-    Merges Low ('9') and Mid ('8') Surdo tracks into one "Surdo 1a/2a" row,
-    drops rows that are entirely rests, and orders the rest by BananaDrum
-    display order (see _DISPLAY_ORDER).
+    Drops rows that are entirely rests, and orders the rest by BananaDrum
+    display order (see _DISPLAY_ORDER). High/Mid/Low Surdo stay separate
+    rows, matching the WebGUI, since their accent/muted glyphs are only
+    distinguishable per-drum.
     """
     by_id = {t.instrument_id: t for t in decoded.tracks}
-    low = by_id.pop('9', None)
-    mid = by_id.pop('8', None)
-
-    rows_by_key: dict[str, Row] = {}
-    if low or mid:
-        rows_by_key['surdo_merged'] = _merge_surdo(low, mid)
-    for instrument_id, track in by_id.items():
-        rows_by_key[instrument_id] = _row_for_track(track)
+    rows_by_key = {instrument_id: _row_for_track(track) for instrument_id, track in by_id.items()}
 
     ordered = [rows_by_key[key] for key in _DISPLAY_ORDER if key in rows_by_key]
     return [row for row in ordered if any(cell for cell in row.cells)]
