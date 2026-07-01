@@ -17,7 +17,7 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 | # | Increment | Scope | Status |
 |---|---|---|---|
 | 1 | Repo setup + `decode.py` | Worktree/branch (`banana_to_pdf` at `C:/Users/bruno/git/samba/banana-to-pdf`), README row, `decode_url()` + `RawTrack`/`DecodedArrangement`, `test_decode.py` (round-trip vs. `sheets_to_banana`'s verified anchor URLs + real-world BananaDrum URLs) | **Done** |
-| 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | Not started |
+| 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | **Done** |
 | 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | Not started |
 | 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | Not started |
 | 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | Not started |
@@ -28,6 +28,14 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 - Manually smoke-tested against two real bananadrum.net URLs (20-bar and 15-bar breaks with mixed polyrhythm/non-polyrhythm tracks) — title/tempo/n_bars parsed correctly, non-polyrhythm tracks padded to the right length, polyrhythm tracks correctly detected and skipped with a warning.
 - `pyproject.toml` created for `pip install -e .` (needed for `banana_to_pdf.*` imports to resolve in tests); `requirements.txt` / `doc/requirements-dev.txt` deferred to Increment 4 since no new dependency is needed until `render.py` (fpdf2).
 - Next step for Increment 2: read `INSTRUMENTS`/`GLYPHS` design already spec'd under "New tool structure" → `src/mapping.py` below; no new open decisions expected, should be a straight implementation.
+
+**Increment 2 implementation notes (for continuing in another session):**
+- `src/mapping.py` — `INSTRUMENTS` (id → name/base/style-labels), `GLYPHS` (id, style_index) → Unicode glyph per the plan's starting proposal, `map_tracks()`, dataclass `Row(label, cells)`.
+- Surdo merge: Low (`'9'`) + Mid (`'8'`) → one `"Surdo 1a/2a"` row; both-hit → `◉`; High Surdo (`'7'`) stays separate. Per-track accent/muted *is* distinguishable (accent=`○` open ring, muted=`●` filled, matching the real BananaDrum icon — fixed 2026-07-01, was backwards in the first draft). Remaining open point is narrower than originally stated: only the both-hit merged cell collapses accent/muted info from the two drums into one glyph (`◉` regardless of which of the 4 accent/muted combos occurred).
+- Display order implemented as an explicit `_DISPLAY_ORDER` key list (`7, surdo_merged, 5, 3, 4, 6, 2, 1, 0, a`) — Repinique/Whippy and Agogô/4-Bell grouped adjacently since the plan's category list didn't specify sub-order.
+- All-rest rows dropped after merge; unmapped (id, style) glyph lookups fall back to `●` and warn once (module-level `_warned` set, same pattern as `sheets_to_banana/src/mapping.py`).
+- `tests/test_mapping.py` — 5 tests passing (glyph lookup, surdo merge incl. both-hit, empty-row drop, display order, fallback+warn).
+- Next step for Increment 3: `src/render.py` per the fpdf2 spec below; no new open decisions expected.
 
 ## Decisions locked with the user
 
