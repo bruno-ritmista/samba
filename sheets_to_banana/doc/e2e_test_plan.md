@@ -85,17 +85,22 @@ chosen.
 ## Prerequisite handoff (blocks completion)
 
 Implementation cannot finish without a one-time manual step that only the user
-can do (no Google credentials available to me):
+can do (no Google credentials available to me).
 
-1. I produce `canonical_csv()` and run `python tests/test_e2e.py` to print the
+**LIVE_SHEET_URL is now defined** (sheet created + shared view-only, currently
+empty):
+`https://docs.google.com/spreadsheets/d/1iksYNiaMQMnQzk6Qsji2RlzqjvoIB_IPf7YyFBqQQYw/edit?usp=sharing`
+
+Remaining steps:
+
+1. ⏳ I produce `canonical_csv()` and run `python tests/test_e2e.py` to print the
    CSV.
-2. **User** creates a Google Sheet, pastes/imports that content, shares it
-   **"anyone with the link — Viewer"**, and gives me the URL.
-3. I set `LIVE_SHEET_URL`, run `python -m sheets_to_banana <url>`, capture the
-   emitted URL(s).
-4. **User** opens each URL in bananadrum.net to confirm it plays the intended
+2. ⏳ **User** pastes/imports that content into the existing (currently empty)
+   sheet above. (Sheet already created + shared "anyone with the link — Viewer".)
+3. ⏳ I run `python -m sheets_to_banana <url>` and capture the emitted URL(s).
+4. ⏳ **User** opens each URL in bananadrum.net to confirm it plays the intended
    pattern.
-5. I freeze the verified URLs into `EXPECTED_URLS`.
+5. ⏳ I freeze the verified URLs into `EXPECTED_URLS`.
 
 ## Critical files
 
