@@ -6,13 +6,19 @@ build-backend = "setuptools.build_meta"
 name = "banana_to_pdf"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["fpdf2>=2.7"]
+
+[project.scripts]
+banana_to_pdf = "banana_to_pdf.__main__:main"
 
 [tool.setuptools]
 packages = ["banana_to_pdf"]
 
 [tool.setuptools.package-dir]
 "banana_to_pdf" = "src"
+
+[tool.setuptools.package-data]
+banana_to_pdf = ["assets/*.ttf"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

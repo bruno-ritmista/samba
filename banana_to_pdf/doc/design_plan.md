@@ -19,7 +19,7 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 | 1 | Repo setup + `decode.py` | Worktree/branch (`banana_to_pdf` at `C:/Users/bruno/git/samba/banana-to-pdf`), README row, `decode_url()` + `RawTrack`/`DecodedArrangement`, `test_decode.py` (round-trip vs. `sheets_to_banana`'s verified anchor URLs + real-world BananaDrum URLs) | **Done** |
 | 2 | `mapping.py` | Authoritative `INSTRUMENTS`/`GLYPHS` tables, surdo merge, drop-empty-rows, `map_tracks()` | **Done** |
 | 3 | `render.py` | fpdf2 A4 grid renderer, 4-bar systems, pagination, title hyperlink, Unicode font | **Done** |
-| 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | Not started |
+| 4 | `__main__.py` + packaging | CLI (`decode_url` → `map_tracks` → `render_pdf`), `requirements.txt`, `doc/requirements-dev.txt`, `pyproject.toml` console-script entry | **Done** |
 | 5 | Colab notebook | `deployment/banana_to_pdf.ipynb` mirroring `sheets_to_banana.ipynb` | Not started |
 
 **Increment 1 implementation notes (for continuing in another session):**
@@ -52,6 +52,15 @@ Increments mirror the pipeline stages (confirmed with user 2026-07-01, one incre
 - **Surdos un-merged.** High/Mid/Low Surdo (`'7'`/`'8'`/`'9'`) are now three separate rows (matching the WebGUI), not merged into one "Surdo 1a/2a" row — a both-hit combined glyph made Low vs Mid indistinguishable, which defeated the point of printing them. `_merge_surdo` and `_SURDO_BOTH_GLYPH` removed from `mapping.py`.
 - **Display order now matches the WebGUI exactly**, top to bottom: Agogô, 4-Bell Agogô, Chocalho, Tamborim, Repinique, Repinique (Whippy), Caixa, Timbau, High Surdo, Mid Surdo, Low Surdo — replacing the earlier "Surdos first" guess.
 - `tests/test_mapping.py` updated to match (glyph assertions, no-merge assertion, new order assertion).
+
+**Increment 4 implementation notes (for continuing in another session):**
+- `src/__main__.py` — `main()`: argparse (`url` positional, `-o/--output`), pipeline `decode_url` → `map_tracks` → `render_pdf`, `_default_output_path(title)` slugifies the title (regex, mirrors `sheets_to_banana`'s use of `re` for title cleanup) falling back to `arrangement.pdf` when title is empty. Errors from `decode_url` (bad/malformed URL) are caught and logged rather than crashing with a traceback, same pattern as `sheets_to_banana/src/__main__.py`'s `fetch_csv` try/except.
+- **Font packaging fixed**, not just wired: `assets/DejaVuSans.ttf` moved to `src/assets/DejaVuSans.ttf` (sibling of `render.py`) and `pyproject.toml` gained `[tool.setuptools.package-data]` (`banana_to_pdf = ["assets/*.ttf"]`). The old path (`Path(__file__).parent.parent / 'assets'`) only worked for editable installs; verified the fix against a real (non-editable) `pip install .` into a throwaway venv — `python -m banana_to_pdf <url>` rendered a non-empty PDF.
+- `pyproject.toml` also gained `dependencies = ["fpdf2>=2.7"]` and `[project.scripts] banana_to_pdf = "banana_to_pdf.__main__:main"` — verified the installed console-script (`banana_to_pdf <url> -o out.pdf`) also renders correctly.
+- Only `python -m banana_to_pdf` (installed) and the `banana_to_pdf` console-script are supported — unlike `sheets_to_banana`, there is **no** top-level direct-run trick file (`banana_to_pdf/__main__.py` importing `src/` without install), since the plan's own usage docs only ever specify `python -m banana_to_pdf ...`, and no CI validate-usage workflow exists yet for this tool to require it.
+- `tests/test_main.py` — 3 tests: default-filename derivation (with and without title), one end-to-end smoke test reusing `test_decode.py`'s verified anchor URL, asserting a real PDF gets written and its path printed.
+- Full suite: 22/22 passing (`pytest tests/ -v`).
+- Next step for Increment 5: `deployment/banana_to_pdf.ipynb` per the plan below — copy `sheets_to_banana.ipynb`'s pattern, `uv pip install ... git+...#subdirectory=banana_to_pdf`, call `decode_url`/`map_tracks`/`render_pdf` directly, `google.colab.files.download(path)`.
 
 ## Decisions locked with the user
 

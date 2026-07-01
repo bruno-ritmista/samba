@@ -8,9 +8,9 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-# Sibling of src/ in the repo; increment 4 packaging must ship this as
-# package data so it resolves the same way once pip-installed.
-_FONT_PATH = Path(__file__).parent.parent / 'assets' / 'DejaVuSans.ttf'
+# Ships as package data (see pyproject.toml [tool.setuptools.package-data]),
+# so this sibling-of-render.py path resolves the same editable or installed.
+_FONT_PATH = Path(__file__).parent / 'assets' / 'DejaVuSans.ttf'
 
 _MARGIN_MM = 10
 _LABEL_WIDTH_MM = 34  # tunable: fits the longest label, "Repinique (Whippy)"
