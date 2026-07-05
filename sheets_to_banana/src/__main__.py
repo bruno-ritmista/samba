@@ -50,7 +50,7 @@ def main() -> None:
         logger.error("Invalid URL: %s", e)
         sys.exit(1)
     except Exception as e:
-        logger.error("Failed to fetch sheet: %s", e)
+        logger.error("%s", e)
         sys.exit(1)
 
     raw_song_title = parse_song_title(csv_text)
