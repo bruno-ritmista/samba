@@ -6,10 +6,26 @@ on:
     types: [completed]
 
 jobs:
-  test:
+  discover:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.find.outputs.tools }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
+      - id: find
+        run: |
+          echo "tools=$(find . -mindepth 2 -maxdepth 2 -name pyproject.toml -printf '%h\n' | sed 's|^\./||' | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: ${{ fromJson(needs.discover.outputs.tools) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,7 +37,7 @@ jobs:
           python-version: '3.13'
 
       - name: Run test suite
-        working-directory: sheets_to_banana
+        working-directory: ${{ matrix.tool }}
         run: |
           pip install .
           pip install -r doc/requirements-dev.txt

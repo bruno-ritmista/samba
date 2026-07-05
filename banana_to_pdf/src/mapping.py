@@ -28,7 +28,7 @@ INSTRUMENTS: dict[str, tuple[str, int, list[str]]] = {
 }
 
 # (instrument_id, style_index) -> Unicode glyph, read off a real BananaDrum
-# WebGUI screenshot 2026-07-01 (still tunable, see doc/design_plan.md).
+# WebGUI screenshot 2026-07-01 (still tunable, see doc/design-plan.md).
 # The real GUI reuses the same glyph for the same *kind* of hit across
 # instruments (X=strong/center accent, x=light/edge/ghost, etc.) rather
 # than giving each instrument its own bespoke set — mirrored here.
