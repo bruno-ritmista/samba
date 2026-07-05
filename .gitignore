@@ -28,4 +28,4 @@ dist/
 build/
 *.egg-info/
 
-banana_to_pdf/src/*.pdf
+banana_to_pdf/output

@@ -9,6 +9,7 @@ import logging
 import re
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from banana_to_pdf.decode import decode_url
 from banana_to_pdf.mapping import map_tracks
@@ -16,12 +17,14 @@ from banana_to_pdf.render import render_pdf
 
 logger = logging.getLogger(__name__)
 
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / 'output'
+
 
 def _default_output_path(title: str) -> str:
     slug = re.sub(r'[^\w\-]+', '_', title).strip('_') if title else ''
-    if slug:
-        return f'{slug}.pdf'
-    return f'Bananadrum_{datetime.now():%Y%m%d_%H%M%S}.pdf'
+    name = f'{slug}.pdf' if slug else f'Bananadrum_{datetime.now():%Y%m%d_%H%M%S}.pdf'
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return str(OUTPUT_DIR / name)
 
 
 def main() -> None:
