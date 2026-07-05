@@ -8,6 +8,9 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = ["requests>=2.31.0"]
 
+[project.scripts]
+sheets_to_banana = "sheets_to_banana.__main__:main"
+
 [tool.setuptools]
 packages = ["sheets_to_banana"]
 
