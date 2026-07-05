@@ -178,7 +178,7 @@ def decode_url(url: str) -> DecodedArrangement:
                 )
                 continue
             logger.warning(
-                "Instrument '%s' has a polyrhythm section; those steps will be skipped.",
+                "Instrument '%s' has a polyrhythm section; those notes will be skipped.",
                 name,
             )
         else:
