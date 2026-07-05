@@ -2,14 +2,14 @@
 
 ## What it does
 
-Converts samba percussion notes in custom table-based format from Google Sheets into a [BananaDrum](https://bananadrum.net) link.
+Converts samba percussion notes in custom table-based format (see [template](https://docs.google.com/spreadsheets/d/1NL_UpLsLf1YSnPphxxP7Mdu-IdTzckSYDjZsCih0LCw/edit?gid=991712970#gid=991712970)) from Google Sheets into a [BananaDrum](https://bananadrum.net) link.
 
 ❓ Something not working? See the [FAQ](FAQ.md).
 
 
 ## How to use it
 
-Before using sheets_to_banana, make sure you satisfy the prerequisites described below.
+Before using sheets_to_banana, make sure you satisfy the [prerequisites](https://github.com/bruno-ritmista/samba/blob/main/sheets_to_banana/README.md#prerequisites).
 
 ### Option 1 (recommended for most users): Run on your internet browser
 
