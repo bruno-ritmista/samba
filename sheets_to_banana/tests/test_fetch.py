@@ -4,6 +4,7 @@ These tests never make real network calls — all HTTP is mocked.
 """
 
 import pytest
+import requests
 from unittest.mock import patch, Mock
 
 from sheets_to_banana.fetch import extract_sheet_info, build_export_url, fetch_csv
@@ -72,10 +73,11 @@ class TestBuildExportUrl:
 # ---------------------------------------------------------------------------
 
 class TestFetchCsv:
-    def _make_mock_response(self, text: str, status_code: int = 200) -> Mock:
+    def _make_mock_response(self, text: str, status_code: int = 200, headers: dict | None = None) -> Mock:
         mock = Mock()
         mock.text = text
         mock.status_code = status_code
+        mock.headers = headers if headers is not None else {"Content-Type": "text/csv"}
         if status_code >= 400:
             mock.raise_for_status.side_effect = Exception(f"HTTP {status_code}")
         else:
@@ -87,7 +89,7 @@ class TestFetchCsv:
         with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
             fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
             mock_get.assert_called_once_with(
-                "https://docs.google.com/spreadsheets/d/MYID/export?format=csv"
+                "https://docs.google.com/spreadsheets/d/MYID/export?format=csv", timeout=15
             )
 
     def test_includes_gid_when_present(self):
@@ -95,7 +97,7 @@ class TestFetchCsv:
         with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
             fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit#gid=99")
             mock_get.assert_called_once_with(
-                "https://docs.google.com/spreadsheets/d/MYID/export?format=csv&gid=99"
+                "https://docs.google.com/spreadsheets/d/MYID/export?format=csv&gid=99", timeout=15
             )
 
     def test_returns_csv_text(self):
@@ -114,3 +116,17 @@ class TestFetchCsv:
     def test_raises_on_invalid_url(self):
         with pytest.raises(ValueError):
             fetch_csv("https://not-a-google-sheet.com/something")
+
+    def test_raises_clear_message_on_html_content_type(self):
+        # Private sheets redirect to a sign-in page: 200 OK with an HTML body.
+        mock_response = self._make_mock_response(
+            "<html>sign in</html>", headers={"Content-Type": "text/html; charset=utf-8"}
+        )
+        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response):
+            with pytest.raises(Exception, match="doesn't look public"):
+                fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
+
+    def test_raises_clear_message_on_timeout(self):
+        with patch("sheets_to_banana.fetch.requests.get", side_effect=requests.exceptions.Timeout):
+            with pytest.raises(Exception, match="check your internet connection"):
+                fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")

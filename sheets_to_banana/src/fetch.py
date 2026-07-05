@@ -25,7 +25,10 @@ def extract_sheet_info(url: str) -> tuple[str, str | None]:
     """
     match = re.search(r'/spreadsheets/d/([a-zA-Z0-9_-]+)', url)
     if not match:
-        raise ValueError(f"Not a valid Google Sheets URL: {url}")
+        raise ValueError(
+            f"Not a valid Google Sheets URL: {url}. "
+            "Copy the full link from your browser's address bar and try again."
+        )
 
     sheet_id = match.group(1)
 
@@ -59,11 +62,23 @@ def fetch_csv(url: str) -> str:
 
     Raises:
         ValueError: if the URL is not a Google Sheets URL.
-        requests.HTTPError: if the download fails (e.g. sheet is private).
+        Exception: if the sheet can't be reached, or isn't shared publicly.
     """
     sheet_id, gid = extract_sheet_info(url)
     export_url = build_export_url(sheet_id, gid)
-    response = requests.get(export_url)
+    try:
+        response = requests.get(export_url, timeout=15)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        raise Exception(
+            "Could not reach Google Sheets — check your internet connection and try again."
+        )
     response.raise_for_status()
+    if "text/csv" not in response.headers.get("Content-Type", ""):
+        # Google redirects private sheets to an HTML sign-in page and returns 200 OK,
+        # so raise_for_status() never catches this — check the content type instead.
+        raise Exception(
+            "This sheet doesn't look public. In Google Sheets: "
+            "File → Share → General access → 'Anyone with the link'."
+        )
     response.encoding = 'utf-8'
     return response.text
