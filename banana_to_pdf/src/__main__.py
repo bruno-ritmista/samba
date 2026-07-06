@@ -17,7 +17,7 @@ from banana_to_pdf.render import render_pdf
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / 'output'
+OUTPUT_DIR = Path.cwd() / 'output'
 
 
 def _default_output_path(title: str) -> str:

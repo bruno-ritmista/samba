@@ -33,4 +33,4 @@ build/
 .claude/preferences*.md
 
 # banana_to_pdf
-banana_to_pdf/output
+output/
