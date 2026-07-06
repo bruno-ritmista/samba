@@ -164,6 +164,11 @@ def decode_url(url: str) -> DecodedArrangement:
     tracks: list[RawTrack] = []
     for segment in track_segments:
         instrument_id, rest = segment[0], segment[1:]
+        if instrument_id not in _INSTRUMENT_BASE:
+            logger.warning(
+                "Unrecognised instrument id '%s'; skipping that track.", instrument_id,
+            )
+            continue
         base = _INSTRUMENT_BASE[instrument_id]
         name = _INSTRUMENT_NAME.get(instrument_id, instrument_id)
         parts = rest.split('-', 1)
