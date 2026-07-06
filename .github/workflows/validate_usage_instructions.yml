@@ -6,14 +6,30 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
-      - 'sheets_to_banana/**'
+      - '*/pyproject.toml'
+      - '*/src/**'
+      - '*/deployment/**'
       - '.github/workflows/validate_usage_instructions.yml'
 
 jobs:
-  validate:
+  discover:
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.find.outputs.tools }}
+    steps:
+      - uses: actions/checkout@v4
 
+      - id: find
+        run: |
+          echo "tools=$(find . -mindepth 2 -maxdepth 2 -name pyproject.toml -printf '%h\n' | sed 's|^\./||' | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: ${{ fromJson(needs.discover.outputs.tools) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,39 +39,36 @@ jobs:
           python-version: '3.13'
 
       - name: Validate Mode A - Direct run (no package install)
-        working-directory: .
         run: |
-          pip install -r sheets_to_banana/requirements.txt
-          python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
-          # Verify no ModuleNotFoundError (should only fail on HTTP/fetch error)
-          if python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+          pip install -r ${{ matrix.tool }}/requirements.txt
+          python ${{ matrix.tool }} https://example.invalid/for-testing 2>&1 || true
+          # Verify no ModuleNotFoundError (should only fail on the tool's own input validation)
+          if python ${{ matrix.tool }} https://example.invalid/for-testing 2>&1 | grep -q "ModuleNotFoundError"; then
             echo "Mode A failed: ModuleNotFoundError present"
             exit 1
           fi
           echo "✓ Mode A passed (no import errors)"
 
       - name: Validate Mode B - Installed module (pip install)
-        working-directory: .
         run: |
           # Fresh venv to test clean install
           python -m venv test_env
           . test_env/bin/activate
           pip install --upgrade pip
-          pip install sheets_to_banana/
-          python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
+          pip install ${{ matrix.tool }}/
+          python -m ${{ matrix.tool }} https://example.invalid/for-testing 2>&1 || true
           # Verify no ModuleNotFoundError
-          if python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+          if python -m ${{ matrix.tool }} https://example.invalid/for-testing 2>&1 | grep -q "ModuleNotFoundError"; then
             echo "Mode B failed: ModuleNotFoundError present"
             exit 1
           fi
           echo "✓ Mode B passed (no import errors)"
 
       - name: Validate Mode C - Notebook execution
-        working-directory: .
         run: |
-          pip install sheets_to_banana/
+          pip install ${{ matrix.tool }}/
           pip install nbconvert jupyter
           jupyter nbconvert --to notebook --execute \
-            sheets_to_banana/deployment/sheets_to_banana.ipynb \
+            ${{ matrix.tool }}/deployment/${{ matrix.tool }}.ipynb \
             --output /tmp/notebook_out.ipynb
           echo "✓ Mode C passed (notebook executed without errors)"

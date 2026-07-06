@@ -1,0 +1,64 @@
+"""Tests for mapping.py — Increment 2."""
+
+import logging
+
+from banana_to_pdf.decode import DecodedArrangement, RawTrack
+from banana_to_pdf.mapping import map_tracks
+
+
+def _arrangement(tracks: list[RawTrack]) -> DecodedArrangement:
+    return DecodedArrangement(title='', tempo=120, n_bars=1, tracks=tracks)
+
+
+def test_simple_track_mapped_to_glyphs():
+    styles = ['0'] * 16
+    styles[0] = '1'
+    styles[4] = '2'
+    arrangement = _arrangement([RawTrack('5', styles)])  # Caixa
+
+    rows = map_tracks(arrangement)
+
+    assert len(rows) == 1
+    assert rows[0].label == 'Caixa'
+    assert rows[0].cells[0] == 'X'
+    assert rows[0].cells[4] == 'x'
+    assert rows[0].cells[1] == ''
+
+
+def test_surdos_stay_as_separate_rows():
+    low = RawTrack('9', ['0', '1', '0', '1'])
+    mid = RawTrack('8', ['0', '0', '1', '1'])
+    rows = map_tracks(_arrangement([low, mid]))
+
+    assert [r.label for r in rows] == ['Mid Surdo', 'Low Surdo']
+    assert rows[0].cells == ['', '', '○', '○']
+    assert rows[1].cells == ['', '○', '', '○']
+
+
+def test_all_rest_row_dropped():
+    rows = map_tracks(_arrangement([RawTrack('5', ['0'] * 16)]))
+    assert rows == []
+
+
+def test_display_order_matches_webgui():
+    high_surdo = RawTrack('7', ['1'] + ['0'] * 15)
+    caixa = RawTrack('5', ['1'] + ['0'] * 15)
+    tamborim = RawTrack('2', ['1'] + ['0'] * 15)
+    rows = map_tracks(_arrangement([high_surdo, caixa, tamborim]))
+    assert [r.label for r in rows] == ['Tamborim', 'Caixa', 'High Surdo']
+
+
+def test_polyrhythm_skipped_steps_render_blank():
+    styles = [None, None, None, None] + ['1'] + ['0'] * 11
+    rows = map_tracks(_arrangement([RawTrack('1', styles)]))  # Chocalho
+    assert rows[0].cells[:4] == ['', '', '', '']
+    assert rows[0].cells[4] == 'X'
+
+
+def test_unmapped_style_falls_back_and_warns(caplog):
+    # Repinique (base 8) has no glyph for style index 7 → falls to fallback
+    styles = ['0'] * 15 + ['7']
+    with caplog.at_level(logging.WARNING):
+        rows = map_tracks(_arrangement([RawTrack('4', styles)]))  # Whippy has no style 7 in GLYPHS
+
+    assert rows[0].cells[-1] == '●'

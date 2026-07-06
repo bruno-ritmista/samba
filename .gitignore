@@ -28,5 +28,9 @@ dist/
 build/
 *.egg-info/
 
+# Claude
 # Personal preferences (not shared)
 .claude/preferences*.md
+
+# banana_to_pdf
+output/

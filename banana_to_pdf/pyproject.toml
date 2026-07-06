@@ -3,19 +3,22 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sheets_to_banana"
+name = "banana_to_pdf"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["requests>=2.31.0"]
+dependencies = ["fpdf2>=2.7"]
 
 [project.scripts]
-sheets_to_banana = "sheets_to_banana.__main__:main"
+banana_to_pdf = "banana_to_pdf.__main__:main"
 
 [tool.setuptools]
-packages = ["sheets_to_banana"]
+packages = ["banana_to_pdf"]
 
 [tool.setuptools.package-dir]
-"sheets_to_banana" = "src"
+"banana_to_pdf" = "src"
+
+[tool.setuptools.package-data]
+banana_to_pdf = ["assets/*.ttf"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

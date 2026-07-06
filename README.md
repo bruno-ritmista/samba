@@ -8,3 +8,4 @@ This repo contains SW tools related to samba music notes.
 |sheets_to_score| Converts a Google Sheet of samba percussion notes in a custom table-based into a traditional music score.| Planned |[sheet_to_score](https://github.com/bruno-ritmista/samba/tree/sheets_to_score)|
 |banana_to_sheets| Converst a shareable BananaDrum link with samba percussion notes into a Google sheet in custom table-based notes format| Planned|[banana_to_sheet](https://github.com/bruno-ritmista/samba/tree/banana_to_sheet)|
 |banana_to_score| Converts a shareable BananaDrum link with samba percussion notes into a traditional music score.|Planned||
+|banana_to_pdf| Converts a shareable BananaDrum link with samba percussion notes into a printable PDF .| In progress |[banana_to_pdf](https://github.com/bruno-ritmista/samba/tree/banana_to_pdf)|

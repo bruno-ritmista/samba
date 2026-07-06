@@ -63,3 +63,12 @@ The script prints the BananaDrum URL to stdout.
 - git
 - pip
 - A Google Sheet in the expected notation format, shared as "Anyone with the link" — start from the [template sheet](https://docs.google.com/spreadsheets/d/1NL_UpLsLf1YSnPphxxP7Mdu-IdTzckSYDjZsCih0LCw/edit?gid=991712970#gid=991712970) and copy it into your own Drive.
+
+## Reported bugs
+
+The reported bugs for sheets_to_banana can be found [here](https://github.com/bruno-ritmista/samba/issues?q=is%3Aissue%20state%3Aopen%20project%3Abruno-ritmista%2F2%20label%3Abug). 
+
+
+## Requested features
+
+The requested features for sheets_to_banana can be found [here](https://github.com/bruno-ritmista/samba/issues?q=is%3Aissue%20state%3Aopen%20label%3Afeature%20project%3Abruno-ritmista%2F2). 
