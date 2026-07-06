@@ -62,3 +62,12 @@ The script prints the saved PDF path to stdout.
 - git
 - pip
 - A samba arrangement built at [bananadrum.net](https://bananadrum.net), with its shareable link copied.
+
+## Reported bugs
+
+The reported bugs for banana_to_pdf can be found [here](https://github.com/bruno-ritmista/samba/issues?q=is%3Aissue%20state%3Aopen%20project%3Abruno-ritmista%2F4%20label%3Abug). 
+
+
+## Requested features
+
+The requested features for banana_to_pdf can be found [here](https://github.com/bruno-ritmista/samba/issues?q=is%3Aissue%20state%3Aopen%20project%3Abruno-ritmista%2F4%20label%3Afeature). 
