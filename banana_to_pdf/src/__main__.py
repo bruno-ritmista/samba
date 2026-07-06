@@ -28,7 +28,7 @@ def _default_output_path(title: str) -> str:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)s: %(message)s', stream=sys.stderr)
+    logging.basicConfig(level=logging.WARNING, format='%(levelname)-8s %(name)s: %(message)s', stream=sys.stderr)
 
     parser = argparse.ArgumentParser(
         prog='python -m banana_to_pdf',
