@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
-      - 'sheets_to_banana/**'
+      - 'sheet_to_banana/**'
       - '.github/workflows/validate_usage_instructions.yml'
 
 jobs:
@@ -25,10 +25,10 @@ jobs:
       - name: Validate Mode A - Direct run (no package install)
         working-directory: .
         run: |
-          pip install -r sheets_to_banana/requirements.txt
-          python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
+          pip install -r sheet_to_banana/requirements.txt
+          python sheet_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
           # Verify no ModuleNotFoundError (should only fail on HTTP/fetch error)
-          if python sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+          if python sheet_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
             echo "Mode A failed: ModuleNotFoundError present"
             exit 1
           fi
@@ -41,10 +41,10 @@ jobs:
           python -m venv test_env
           . test_env/bin/activate
           pip install --upgrade pip
-          pip install sheets_to_banana/
-          python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
+          pip install sheet_to_banana/
+          python -m sheet_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 || true
           # Verify no ModuleNotFoundError
-          if python -m sheets_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
+          if python -m sheet_to_banana https://docs.google.com/spreadsheets/d/INVALID_ID_FOR_TESTING/edit 2>&1 | grep -q "ModuleNotFoundError"; then
             echo "Mode B failed: ModuleNotFoundError present"
             exit 1
           fi
@@ -53,9 +53,9 @@ jobs:
       - name: Validate Mode C - Notebook execution
         working-directory: .
         run: |
-          pip install sheets_to_banana/
+          pip install sheet_to_banana/
           pip install nbconvert jupyter
           jupyter nbconvert --to notebook --execute \
-            sheets_to_banana/deployment/sheets_to_banana.ipynb \
+            sheet_to_banana/deployment/sheet_to_banana.ipynb \
             --output /tmp/notebook_out.ipynb
           echo "✓ Mode C passed (notebook executed without errors)"

@@ -5,11 +5,11 @@ https://bananadrum.net/?a2=4-4.120.1.1-4.16.9Hgm  (tested in BananaDrum).
 """
 
 import pytest
-from sheets_to_banana.encode import (
+from sheet_to_banana.encode import (
     encode_url, _url_encode_number, _encode_notes,
     _pack_polyrhythm_string, _encode_polyrhythms, _build_effective_notes,
 )
-from sheets_to_banana.mapping import MappedTrack, MappedPolyrhythm
+from sheet_to_banana.mapping import MappedTrack, MappedPolyrhythm
 
 
 # ── _url_encode_number ────────────────────────────────────────────────────────

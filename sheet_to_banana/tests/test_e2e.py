@@ -17,7 +17,7 @@ import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tests.csv_helpers import make_csv, section_label, instrument_row, empty_row, break_header
-from sheets_to_banana.fetch import extract_sheet_info, build_export_url
+from sheet_to_banana.fetch import extract_sheet_info, build_export_url
 
 LIVE_SHEET_URL = (
     'https://docs.google.com/spreadsheets/d/'
@@ -61,8 +61,8 @@ def test_e2e_live_sheet(monkeypatch, capsys):
     except (requests.ConnectionError, requests.Timeout):
         pytest.skip("Google Sheets unreachable")
 
-    monkeypatch.setattr(sys, 'argv', ['sheets_to_banana', LIVE_SHEET_URL])
-    from sheets_to_banana.__main__ import main
+    monkeypatch.setattr(sys, 'argv', ['sheet_to_banana', LIVE_SHEET_URL])
+    from sheet_to_banana.__main__ import main
     main()
 
     out = capsys.readouterr().out

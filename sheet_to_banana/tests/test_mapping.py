@@ -4,8 +4,8 @@ Each test builds a minimal Break and asserts on the mapped output.
 """
 
 import pytest
-from sheets_to_banana.parse import Break, PolyGroup
-from sheets_to_banana.mapping import map_break, MappedTrack, MappedPolyrhythm
+from sheet_to_banana.parse import Break, PolyGroup
+from sheet_to_banana.mapping import map_break, MappedTrack, MappedPolyrhythm
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

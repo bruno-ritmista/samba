@@ -1,7 +1,7 @@
-"""Increment 5: CLI entry point for sheets_to_banana.
+"""Increment 5: CLI entry point for sheet_to_banana.
 
 Usage:
-    python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
+    python -m sheet_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 
 Options:
     <sheets_url>     Google Sheets URL (public / anyone-with-link).
@@ -14,10 +14,10 @@ import logging
 import re
 import sys
 
-from sheets_to_banana.fetch import fetch_csv
-from sheets_to_banana.parse import parse_sheet, parse_song_title
-from sheets_to_banana.mapping import map_break, trim_empty_bars
-from sheets_to_banana.encode import encode_url
+from sheet_to_banana.fetch import fetch_csv
+from sheet_to_banana.parse import parse_sheet, parse_song_title
+from sheet_to_banana.mapping import map_break, trim_empty_bars
+from sheet_to_banana.encode import encode_url
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def main() -> None:
     _setup_logging()
 
     parser = argparse.ArgumentParser(
-        prog='python -m sheets_to_banana',
+        prog='python -m sheet_to_banana',
         description='Convert a public Google Sheet of percussion notes into a BananaDrum URL.',
     )
     parser.add_argument('url', help='Google Sheets URL (public share link)')

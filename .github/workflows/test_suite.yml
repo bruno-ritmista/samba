@@ -21,7 +21,7 @@ jobs:
           python-version: '3.13'
 
       - name: Run test suite
-        working-directory: sheets_to_banana
+        working-directory: sheet_to_banana
         run: |
           pip install .
           pip install -r doc/requirements-dev.txt

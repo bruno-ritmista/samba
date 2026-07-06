@@ -10,7 +10,7 @@ test_parse.py.
 """
 
 import pytest
-from sheets_to_banana.keywords import expand_keywords
+from sheet_to_banana.keywords import expand_keywords
 
 
 def _corte_beat(cells: list[str], beat: int) -> list[str]:

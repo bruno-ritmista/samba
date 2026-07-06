@@ -16,7 +16,7 @@ BananaDrum instrument IDs:
 
 import logging
 from dataclasses import dataclass, field
-from sheets_to_banana.parse import Break, PolyGroup
+from sheet_to_banana.parse import Break, PolyGroup
 
 logger = logging.getLogger(__name__)
 

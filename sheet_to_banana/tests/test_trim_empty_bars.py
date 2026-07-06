@@ -1,7 +1,7 @@
 """Tests for trim_empty_bars() — Increment 9."""
 
 import pytest
-from sheets_to_banana.mapping import MappedTrack, MappedPolyrhythm, trim_empty_bars
+from sheet_to_banana.mapping import MappedTrack, MappedPolyrhythm, trim_empty_bars
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

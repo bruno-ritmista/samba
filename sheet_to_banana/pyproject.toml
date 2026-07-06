@@ -3,16 +3,16 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sheets_to_banana"
+name = "sheet_to_banana"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = ["requests>=2.31.0"]
 
 [tool.setuptools]
-packages = ["sheets_to_banana"]
+packages = ["sheet_to_banana"]
 
 [tool.setuptools.package-dir]
-"sheets_to_banana" = "src"
+"sheet_to_banana" = "src"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

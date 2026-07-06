@@ -7,7 +7,7 @@ import pytest
 import requests
 from unittest.mock import patch, Mock
 
-from sheets_to_banana.fetch import extract_sheet_info, build_export_url, fetch_csv
+from sheet_to_banana.fetch import extract_sheet_info, build_export_url, fetch_csv
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ class TestFetchCsv:
 
     def test_calls_correct_export_url(self):
         mock_response = self._make_mock_response("col1,col2\nval1,val2")
-        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
+        with patch("sheet_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
             fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
             mock_get.assert_called_once_with(
                 "https://docs.google.com/spreadsheets/d/MYID/export?format=csv", timeout=15
@@ -94,7 +94,7 @@ class TestFetchCsv:
 
     def test_includes_gid_when_present(self):
         mock_response = self._make_mock_response("a,b")
-        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
+        with patch("sheet_to_banana.fetch.requests.get", return_value=mock_response) as mock_get:
             fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit#gid=99")
             mock_get.assert_called_once_with(
                 "https://docs.google.com/spreadsheets/d/MYID/export?format=csv&gid=99", timeout=15
@@ -103,13 +103,13 @@ class TestFetchCsv:
     def test_returns_csv_text(self):
         expected = "instrument,note\nCaixa,X"
         mock_response = self._make_mock_response(expected)
-        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response):
+        with patch("sheet_to_banana.fetch.requests.get", return_value=mock_response):
             result = fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
         assert result == expected
 
     def test_raises_on_http_error(self):
         mock_response = self._make_mock_response("", status_code=403)
-        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response):
+        with patch("sheet_to_banana.fetch.requests.get", return_value=mock_response):
             with pytest.raises(Exception):
                 fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
 
@@ -122,11 +122,11 @@ class TestFetchCsv:
         mock_response = self._make_mock_response(
             "<html>sign in</html>", headers={"Content-Type": "text/html; charset=utf-8"}
         )
-        with patch("sheets_to_banana.fetch.requests.get", return_value=mock_response):
+        with patch("sheet_to_banana.fetch.requests.get", return_value=mock_response):
             with pytest.raises(Exception, match="doesn't look public"):
                 fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")
 
     def test_raises_clear_message_on_timeout(self):
-        with patch("sheets_to_banana.fetch.requests.get", side_effect=requests.exceptions.Timeout):
+        with patch("sheet_to_banana.fetch.requests.get", side_effect=requests.exceptions.Timeout):
             with pytest.raises(Exception, match="check your internet connection"):
                 fetch_csv("https://docs.google.com/spreadsheets/d/MYID/edit")

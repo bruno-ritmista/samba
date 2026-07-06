@@ -6,7 +6,7 @@ This lets you verify the parser without needing a real Google Sheet.
 
 import textwrap
 import pytest
-from sheets_to_banana.parse import parse_sheet, Break, PolyGroup
+from sheet_to_banana.parse import parse_sheet, Break, PolyGroup
 from tests.csv_helpers import make_csv, section_label, instrument_row, empty_row, break_header
 
 
@@ -156,7 +156,7 @@ def test_keyword_span_capped_at_one_beat():
     # Single levada at beat 3 (col 8), followed by 55 empty cols
     notes = [''] * 8 + ['levada'] + [''] * 55
     caixa_pattern = 'X X x / X x / x X x / x X x / x'.split()
-    from sheets_to_banana.keywords import expand_keywords
+    from sheet_to_banana.keywords import expand_keywords
     result = expand_keywords('Caixa', notes)
     # Cols 8-11 should be the beat-3 slice of the levada pattern (offset=8)
     assert result[8:12] == caixa_pattern[8:12]
@@ -570,8 +570,8 @@ def test_short_corte_full_pattern():
     Beats 2,3 are 'mid' ('0 0 X 0'); beat 4 is the run's end ('0 X 0 X').
     Encodes to the issue's expected '74Tw' segment.
     """
-    from sheets_to_banana.mapping import map_break
-    from sheets_to_banana.encode import encode_url
+    from sheet_to_banana.mapping import map_break
+    from sheet_to_banana.encode import encode_url
 
     # Corte at idx 4, 8, 12 (beats 2,3,4 of bar 1); beat 1 and the rest empty
     notes = [''] * 4 + (['Corte'] + [''] * 3) * 3 + [''] * 48
@@ -598,8 +598,8 @@ def test_long_corte_full_pattern():
     All but the last corte beat are 'mid'; the final beat (bar2 beat4) is 'end'.
     Encodes to the issue's expected '7cuZDqjc' segment.
     """
-    from sheets_to_banana.mapping import map_break
-    from sheets_to_banana.encode import encode_url
+    from sheet_to_banana.mapping import map_break
+    from sheet_to_banana.encode import encode_url
 
     # Corte at idx 4,8,12,16,20,24,28 (bar1 beat2 → bar2 beat4)
     notes = [''] * 4 + (['Corte'] + [''] * 3) * 7 + [''] * 32
@@ -626,7 +626,7 @@ def test_long_corte_full_pattern():
 
 def test_short_subida_full_pattern():
     """Short subida: Repique with Subida on bar1 beats 1-2 → climax pattern."""
-    from sheets_to_banana.mapping import map_break
+    from sheet_to_banana.mapping import map_break
 
     notes = (['Subida'] + [''] * 3) * 2 + [''] * 56
     csv_text = make_csv(
@@ -645,7 +645,7 @@ def test_short_subida_full_pattern():
 
 def test_regular_subida_full_pattern():
     """Regular subida: Repique with Subida on all 4 beats of bar1."""
-    from sheets_to_banana.mapping import map_break
+    from sheet_to_banana.mapping import map_break
 
     notes = (['Subida'] + [''] * 3) * 4 + [''] * 48
     csv_text = make_csv(

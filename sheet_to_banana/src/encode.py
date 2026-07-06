@@ -17,7 +17,7 @@ Encoding:
 import logging
 from urllib.parse import quote
 
-from sheets_to_banana.mapping import MappedPolyrhythm, MappedTrack
+from sheet_to_banana.mapping import MappedPolyrhythm, MappedTrack
 
 logger = logging.getLogger(__name__)
 
