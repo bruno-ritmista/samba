@@ -41,17 +41,18 @@ def main() -> None:
 
     try:
         decoded = decode_url(args.url)
+
+        rows = map_tracks(decoded)
+        if not rows:
+            logger.error("No recognised instruments with notes; nothing to render.")
+            sys.exit(1)
+
+        out_path = args.output or _default_output_path(decoded.title)
+        render_pdf(rows, decoded.n_bars, decoded.title, args.url, out_path)
     except Exception as e:
-        logger.error("Failed to decode URL: %s", e)
+        logger.error("Failed to generate PDF: %s", e)
         sys.exit(1)
 
-    rows = map_tracks(decoded)
-    if not rows:
-        logger.error("No recognised instruments with notes; nothing to render.")
-        sys.exit(1)
-
-    out_path = args.output or _default_output_path(decoded.title)
-    render_pdf(rows, decoded.n_bars, decoded.title, args.url, out_path)
     print(out_path)
 
 
