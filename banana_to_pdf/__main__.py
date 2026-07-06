@@ -24,4 +24,6 @@ _spec = importlib.util.spec_from_file_location(
 _mod = importlib.util.module_from_spec(_spec)
 _mod.__package__ = 'banana_to_pdf'
 _spec.loader.exec_module(_mod)
-_mod.main()
+
+if __name__ == '__main__':
+    _mod.main()
