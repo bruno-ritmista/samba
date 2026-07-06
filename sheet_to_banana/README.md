@@ -1,4 +1,4 @@
-# sheets_to_banana
+# sheet_to_banana
 
 ## What it does
 
@@ -9,11 +9,11 @@ Converts samba percussion notes in custom table-based format (see [template](htt
 
 ## How to use it
 
-Before using sheets_to_banana, make sure you satisfy the [prerequisites](https://github.com/bruno-ritmista/samba/blob/main/sheets_to_banana/README.md#prerequisites).
+Before using sheet_to_banana, make sure you satisfy the [prerequisites](https://github.com/bruno-ritmista/samba/blob/main/sheet_to_banana/README.md#prerequisites).
 
 ### Option 1 (recommended for most users): Run on your internet browser
 
-Open the [sheets_to_banana python notebook in Google Colab](https://colab.research.google.com/github/bruno-ritmista/samba/blob/main/sheets_to_banana/deployment/sheets_to_banana.ipynb) then follow the instructions on the screen.
+Open the [sheet_to_banana python notebook in Google Colab](https://colab.research.google.com/github/bruno-ritmista/samba/blob/main/sheet_to_banana/deployment/sheet_to_banana.ipynb) then follow the instructions on the screen.
 
 
 ### Option 2 (recommended for advanced users): Run as script on your computer
@@ -28,15 +28,15 @@ cd samba
 **Option 2.1 — Run directly from the repository root (no install required):**
 
 ```bash
-pip install -r sheets_to_banana/requirements.txt
-python sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
+pip install -r sheet_to_banana/requirements.txt
+python sheet_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 ```
 
 **Option 2.2 — Install the package, then run as a module:**
 
 ```bash
-pip install sheets_to_banana/
-python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
+pip install sheet_to_banana/
+python -m sheet_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 ```
 
 **Arguments:**
@@ -46,7 +46,7 @@ python -m sheets_to_banana <sheets_url> [--break INDEX] [--tempo BPM]
 
 **Example:**
 ```bash
-python sheets_to_banana https://docs.google.com/spreadsheets/d/ABC123/edit --break 1 --tempo 110
+python sheet_to_banana https://docs.google.com/spreadsheets/d/ABC123/edit --break 1 --tempo 110
 ```
 
 The script prints the BananaDrum URL to stdout.

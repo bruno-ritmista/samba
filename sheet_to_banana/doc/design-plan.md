@@ -1,6 +1,6 @@
-# sheets_to_banana — Design Plan
+# sheet_to_banana — Design Plan
 
-This file desctribes the plan to design sheets_to_banana.
+This file desctribes the plan to design sheet_to_banana.
 
 ## Design increments
 
@@ -50,7 +50,7 @@ Implements the BananaDrum URL encoding (replicates the TypeScript in
 ### ✅ Increment 5 — intergrate increments 1-5
 CLI entry point:
 ```
-python -m sheets_to_banana <sheets_url> [--break 0] [--tempo 120]
+python -m sheet_to_banana <sheets_url> [--break 0] [--tempo 120]
 ```
 
 ### ✅ Increment 6 — parse, encode keywords (e.g. levada, virada) from custom table-based notes to Bananadrum notes

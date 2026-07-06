@@ -14,7 +14,7 @@ Copy the [template](https://docs.google.com/spreadsheets/d/1NL_UpLsLf1YSnPphxxP7
 The link you pasted doesn't look like a Google Sheets link. Copy the full link from your browser's address bar and try again.
 
 **"This sheet doesn't look public..."**
-The sheet isn't shared publicly, therefore sheets_to_banana cannot access it. In the Google Sheets file with your notes: File → Share → Share with others → General access: "Anyone with the link".
+The sheet isn't shared publicly, therefore sheet_to_banana cannot access it. In the Google Sheets file with your notes: File → Share → Share with others → General access: "Anyone with the link".
 
 **"Could not reach Google Sheets — check your internet connection..."**
 The request to Google Sheets timed out or failed. Check your internet connection and try again.
@@ -33,7 +33,7 @@ The Tempo field must be a plain number (e.g. `120` or `120 bpm`).
 
 ## Known limitations
 
-- sheets_to_banana use Google Colab to run in your internet browser. As Colab is intended to run on desktops — there may be some limitations when runnning it on mobile devices.
+- sheet_to_banana use Google Colab to run in your internet browser. As Colab is intended to run on desktops — there may be some limitations when runnning it on mobile devices.
 - A live internet connection is required.
 - The `branch_name` field in the notebook is for testing only — leave it blank for normal use.
 

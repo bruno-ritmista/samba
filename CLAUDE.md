@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-A collection of Python tools for working with samba percussion notation. The first completed tool is **sheets_to_banana**: converts a Google Sheets percussion grid into a shareable [BananaDrum](https://bananadrum.net) URL.
+A collection of Python tools for working with samba percussion notation. The first completed tool is **sheet_to_banana**: converts a Google Sheets percussion grid into a shareable [BananaDrum](https://bananadrum.net) URL.
 
 Planned tools (branches exist but not yet implemented): `sheets_to_score`, `banana_to_sheet`.
 
 ## Commands
 
-Run from the `sheets_to_banana/` directory:
+Run from the `sheet_to_banana/` directory:
 
 ```bash
 # Install dev dependencies
@@ -30,14 +30,14 @@ pip install .
 
 # Run the tool (no install needed)
 pip install -r requirements.txt
-python sheets_to_banana <sheets_url> [--break BREAK] [--tempo TEMPO]
+python sheet_to_banana <sheets_url> [--break BREAK] [--tempo TEMPO]
 ```
 
 CI runs on Python 3.13/Ubuntu via two workflows: `validate_usage_instructions.yml` (checks direct-run and pip-install modes) and `test_suite.yml` (runs pytest after validation passes).
 
-## Architecture: sheets_to_banana
+## Architecture: sheet_to_banana
 
-The pipeline runs left-to-right through these modules inside `sheets_to_banana/src/`:
+The pipeline runs left-to-right through these modules inside `sheet_to_banana/src/`:
 
 ```
 Google Sheets URL
@@ -75,7 +75,7 @@ Each track is a base-N integer (N = number of hit styles + 1) encoded in custom 
 | `src/mapping.py` | Instrument/note → BananaDrum ID translation |
 | `src/encode.py` | Base-64 encoding; polyrhythm encoding; full URL assembly |
 | `doc/design-plan.md` | 8 completed increments; explains the motivation behind each piece |
-| `deployment/sheets_to_banana.ipynb` | Google Colab notebook for end users |
+| `deployment/sheet_to_banana.ipynb` | Google Colab notebook for end users |
 
 ## Domain Skills
 
