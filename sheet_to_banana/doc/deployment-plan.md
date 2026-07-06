@@ -1,4 +1,4 @@
-# Sheets-to-Banana Deployment Plan
+# Sheet-to-Banana Deployment Plan
 
 ## Goal
 Enable non-technical users (zero software development knowledge) to convert Google Sheets notes to BananaDrum URLs via a simple workflow accessible from a link in the Google Sheet.
@@ -28,13 +28,13 @@ Users who can open a web link and operate a simple website, but don't use comput
 7. Notebook reads the user's Google Sheet using the public CSV export URL (no authentication required — sheet must be shared with "anyone with link can view")
 8. Notebook extracts notes from the sheet
 9. User optionally modifies `break` and `tempo` parameters (have defaults)
-10. Notebook calls the sheets-to-banana Python module with extracted data
+10. Notebook calls the sheet-to-banana Python module with extracted data
 11. Notebook displays generated BananaDrum URL
 12. If error occurs, notebook shows user-friendly error message (no URL created)
 
 ### Technology Stack
-- **Notebook hosting:** GitHub (same repo as sheets-to-banana module); opened via Colab link
-- **Source code:** GitHub (sheets-to-banana Python module + notebook)
+- **Notebook hosting:** GitHub (same repo as sheet-to-banana module); opened via Colab link
+- **Source code:** GitHub (sheet-to-banana Python module + notebook)
 - **Authentication:** None required for sheet reading (public CSV export URL)
 - **Logging:** Deferred to a future increment (see Increment: Logging)
 - **Deployment frequency:** Manual — notebook import pinned to a specific commit hash (see Version Pinning)
@@ -46,7 +46,7 @@ Users who can open a web link and operate a simple website, but don't use comput
 
 ---
 
-## ✅ Increment 1: Create Python Notebook to Call sheets-to-banana
+## ✅ Increment 1: Create Python Notebook to Call sheet-to-banana
 
 ### Intended Behavior
 The Colab notebook is a self-contained application that:
@@ -73,8 +73,8 @@ The Colab notebook is a self-contained application that:
 - Users can manually edit these before execution
 - Sensible defaults allow non-technical users to just run as-is
 
-**Calls sheets-to-banana:**
-- Imports the sheets-to-banana Python module from GitHub, pinned to a specific commit hash (see Version Pinning)
+**Calls sheet-to-banana:**
+- Imports the sheet-to-banana Python module from GitHub, pinned to a specific commit hash (see Version Pinning)
 - Calls it with: Google Sheet data + `break` + `tempo` parameters
 - Returns: BananaDrum URL
 
@@ -83,7 +83,7 @@ The Colab notebook is a self-contained application that:
 - Users can copy/click the URL
 
 **Error handling:**
-- Catches exceptions from sheets-to-banana or the CSV fetch
+- Catches exceptions from sheet-to-banana or the CSV fetch
 - Displays user-friendly error messages only (no Python tracebacks)
 - Example: _"Could not read your Google Sheet. Please check the link and try again."_
 - Does NOT generate a BananaDrum URL if an error occurs
@@ -109,14 +109,14 @@ This extends the kernel's active window up to Colab's free tier maximum (~12 hou
 ---
 
 ## Version Pinning
-The notebook installs the sheets-to-banana Python module from GitHub pinned to a **specific commit hash**, not `main`:
+The notebook installs the sheet-to-banana Python module from GitHub pinned to a **specific commit hash**, not `main`:
 
 ```python
 import subprocess
 subprocess.run(["pip", "install", "uv", "-q"], check=True)
 subprocess.run(
     ["uv", "pip", "install", "--system", "-q",
-     "git+https://github.com/bruno-ritmista/samba@<COMMIT_HASH>#egg=sheets-to-banana"],
+     "git+https://github.com/bruno-ritmista/samba@<COMMIT_HASH>#egg=sheet-to-banana"],
     check=True
 )
 ```

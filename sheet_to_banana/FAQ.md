@@ -39,5 +39,5 @@ The Tempo field must be a plain number (e.g. `120` or `120 bpm`).
 
 ## Still stuck?
 
-If you still have a question, try reaching out to the person who shared sheetss_to_banana with you.
+If you still have a question, try reaching out to the person who shared sheet_to_banana with you.
 If you want to report bug or request a feature and you have a GitHub account, please do so [here](https://github.com/bruno-ritmista/samba/issues).
